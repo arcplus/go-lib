@@ -35,6 +35,21 @@ func New(code ErrCode, message string, args ...interface{}) *Error {
 	return err
 }
 
+// NewErr warp err to *Error with code 0 if err is not *Error
+func NewErr(err error) *Error {
+	if err == nil {
+		return nil
+	}
+
+	if v, ok := err.(*Error); ok {
+		return v
+	}
+
+	inErr := &Error{code: 0, message: err.Error()}
+	_, inErr.file, inErr.line, _ = runtime.Caller(1)
+	return inErr
+}
+
 // Code returns ErrCode
 func (e *Error) Code() ErrCode {
 	return e.code
@@ -130,5 +145,32 @@ func Equal(err1, err2 error) bool {
 		return false
 	}
 
+	if inErr1.code == 0 && inErr2.code == 0 {
+		return inErr1.Message() == inErr2.Message()
+	}
+
 	return inErr1.code == inErr2.code
+}
+
+// CodeEqual check err.(*Error).code==code
+func CodeEqual(code ErrCode, err error) bool {
+	v, ok := err.(*Error)
+	if !ok {
+		return false
+	}
+	return v.code == code
+}
+
+// UnWrap unwraps 1st layer err to *Error if possible
+func UnWrap(err error) *Error {
+	if err == nil {
+		return nil
+	}
+
+	v, ok := err.(*Error)
+	if ok {
+		return v
+	}
+
+	return &Error{message: err.Error()}
 }

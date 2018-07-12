@@ -69,6 +69,21 @@ func TestEqual(t *testing.T) {
 			args: args{e1: &Error{code: 123, message: "hello"}, e2: &Error{code: 456, message: "hello"}},
 			want: false,
 		},
+		{
+			name: "not equal test",
+			args: args{e1: &Error{code: 0, message: "hello"}, e2: &Error{code: 0, message: "world"}},
+			want: false,
+		},
+		{
+			name: "equal test",
+			args: args{e1: &Error{code: 0, message: "hello"}, e2: &Error{code: 0, message: "hello"}},
+			want: true,
+		},
+		{
+			name: "equal test",
+			args: args{e1: New(0, "hello world"), e2: New(0, "hello %s", "world")},
+			want: true,
+		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -77,4 +92,27 @@ func TestEqual(t *testing.T) {
 			}
 		})
 	}
+}
+
+func TestCodeEqual(t *testing.T) {
+	err := New(404, "not found")
+	if !CodeEqual(404, err) {
+		t.Fatal("should equal")
+	}
+}
+
+func TestNewErr(t *testing.T) {
+	err := NewErr(errors.New("hello"))
+	t.Log(err)
+	err = NewErr(New(404, "not found"))
+	t.Log(err)
+}
+
+func TestUnWrap(t *testing.T) {
+	var err error = NewErr(New(404, "not found"))
+	e := UnWrap(err)
+	t.Log(e)
+	err = NewErr(errors.New("hello"))
+	e = UnWrap(err)
+	t.Log(e)
 }
