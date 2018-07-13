@@ -1,100 +1,174 @@
 package errs
 
-import "github.com/juju/errors"
+import (
+	"fmt"
+	"reflect"
+	"strconv"
+	"strings"
 
-// Trace adds the location of the Trace call to the stack.  The Cause of the
-// resulting error is the same as the error parameter.  If the other error is
-// nil, the result will be nil.
-//
-// For example:
-//   if err := SomeFunc(); err != nil {
-//       return errors.Trace(err)
-//   }
-//
-var Trace = errors.Trace
+	"google.golang.org/grpc/codes"
+	"google.golang.org/grpc/status"
+)
 
-// Annotate is used to add extra context to an existing error. The location of
-// the Annotate call is recorded with the annotations. The file, line and
-// function are also recorded.
-//
-// For example:
-//   if err := SomeFunc(); err != nil {
-//       return errors.Annotate(err, "failed to frombulate")
-//   }
-//
-var Annotate = errors.Annotate
+// ToGRPCErr convert *Error to gRPC error
+func ToGRPCErr(err error) error {
+	if err == nil {
+		return nil
+	}
 
-// Annotatef is used to add extra context to an existing error. The location of
-// the Annotate call is recorded with the annotations. The file, line and
-// function are also recorded.
-//
-// For example:
-//   if err := SomeFunc(); err != nil {
-//       return errors.Annotatef(err, "failed to frombulate the %s", arg)
-//   }
-//
-var Annotatef = errors.Annotatef
+	if v, ok := err.(*Error); ok {
+		return status.Error(codes.Code(v.code), v.Message())
+	}
 
-// DeferredAnnotatef annotates the given error (when it is not nil) with the given
-// format string and arguments (like fmt.Sprintf). If *err is nil, DeferredAnnotatef
-// does nothing. This method is used in a defer statement in order to annotate any
-// resulting error with the same message.
-//
-// For example:
-//
-//    defer DeferredAnnotatef(&err, "failed to frombulate the %s", arg)
-//
-var DeferredAnnotatef = errors.DeferredAnnotatef
+	return status.Error(codes.Unknown, err.Error())
+}
 
-// Wrap changes the Cause of the error. The location of the Wrap call is also
-// stored in the error stack.
-//
-// For example:
-//   if err := SomeFunc(); err != nil {
-//       newErr := &packageError{"more context", private_value}
-//       return errors.Wrap(err, newErr)
-//   }
-//
-var Wrap = errors.Wrap
+// UnWrap convert err or gRPC err to *Error if possible
+func UnWrap(err error) *Error {
+	if err == nil {
+		return nil
+	}
 
-// Wrapf changes the Cause of the error, and adds an annotation. The location
-// of the Wrap call is also stored in the error stack.
-//
-// For example:
-//   if err := SomeFunc(); err != nil {
-//       return errors.Wrapf(err, simpleErrorType, "invalid value %q", value)
-//   }
-//
-var Wrapf = errors.Wrapf
+	v, ok := err.(*Error)
+	if ok {
+		return v
+	}
 
-// Mask hides the underlying error type, and records the location of the masking.
-var Mask = errors.Mask
+	if s, ok := status.FromError(err); ok {
+		return new(ErrCode(s.Code()), s.Message(), nil, nil, 1)
+	}
 
-// Mask masks the given error with the given format string and arguments (like
-// fmt.Sprintf), returning a new error that maintains the error stack, but
-// hides the underlying error type.  The error string still contains the full
-// annotations. If you want to hide the annotations, call Wrap.
-var Maskf = errors.Maskf
+	return new(0, err.Error(), nil, nil, 1)
+}
+
+// Equal checks if two errors is equal
+func Equal(err1, err2 error) bool {
+	originErr1, originErr2 := Cause(err1), Cause(err2)
+	if originErr1 == originErr2 {
+		return true
+	}
+
+	if originErr1 == nil || originErr2 == nil {
+		return false
+	}
+
+	inErr1, _ := originErr1.(*Error)
+	inErr2, _ := originErr2.(*Error)
+	if inErr1 != nil && inErr2 != nil {
+		if inErr1.code == 0 && inErr2.code == 0 {
+			return inErr1.Message() == inErr2.Message()
+		}
+		return inErr1.code == inErr2.code
+	}
+
+	// same Error() return
+	return originErr1.Error() == originErr2.Error()
+}
+
+// CodeEqual check err.(*Error).code==code
+func CodeEqual(code ErrCode, err error) bool {
+	v, ok := err.(*Error)
+	if !ok {
+		return false
+	}
+	return v.code == code
+}
 
 // Cause returns the cause of the given error.  This will be either the
 // original error, or the result of a Wrap or Mask call.
 //
 // Cause is the usual way to diagnose errors that may have been wrapped by
 // the other errors functions.
-var Cause = errors.Cause
+// Cause returns the cause of the given error.  This will be either the
+// original error, or the result of a Wrap or Mask call.
+//
+// Cause is the usual way to diagnose errors that may have been wrapped by
+// the other errors functions.
+func Cause(err error) error {
+	var diag error
+	if err, ok := err.(causer); ok {
+		diag = err.Cause()
+	}
+	if diag != nil {
+		return diag
+	}
+	return err
+}
 
-// ErrorStack returns a string representation of the annotated error. If the
-// error passed as the parameter is not an annotated error, the result is
-// simply the result of the Error() method on that error.
-//
-// If the error is an annotated error, a multi-line string is returned where
-// each line represents one entry in the annotation stack. The full filename
-// from the call stack is used in the output.
-//
-//     first error
-//     github.com/juju/errors/annotation_test.go:193:
-//     github.com/juju/errors/annotation_test.go:194: annotation
-//     github.com/juju/errors/annotation_test.go:195:
-//     github.com/juju/errors/annotation_test.go:196: more context
-//     github.com/juju/errors/annotation_test.go:197:
-var ErrorStack = errors.ErrorStack
+type locationer interface {
+	Location() (string, int)
+}
+
+type wrapper interface {
+	Code() ErrCode
+	// Message returns the top level error message,
+	// not including the message from the Previous
+	// error.
+	Message() string
+
+	// Underlying returns the Previous error, or nil
+	// if there is none.
+	Underlying() error
+}
+
+type causer interface {
+	Cause() error
+}
+
+func StackTrace(err error) string {
+	return strings.Join(Stack(err), "\n")
+}
+
+func Stack(err error) []string {
+	if err == nil {
+		return nil
+	}
+
+	var lines []string
+	for {
+		var buff []byte
+		if err, ok := err.(locationer); ok {
+			file, line := err.Location()
+			// Strip off the leading GOPATH/src path elements.
+			file = trimGoPath(file)
+			if file != "" {
+				buff = append(buff, fmt.Sprintf("%s:%d", file, line)...)
+				buff = append(buff, ": "...)
+			}
+		}
+		if cerr, ok := err.(wrapper); ok {
+			if code := cerr.Code(); code != 0 {
+				buff = append(buff, "["+strconv.Itoa(int(code))+"]"...)
+			}
+
+			message := cerr.Message()
+			buff = append(buff, message...)
+			// If there is a cause for this error, and it is different to the cause
+			// of the underlying error, then output the error string in the stack trace.
+			var cause error
+			if err1, ok := err.(causer); ok {
+				cause = err1.Cause()
+			}
+			err = cerr.Underlying()
+			if cause != nil && !sameError(Cause(err), cause) {
+				if message != "" {
+					buff = append(buff, ": "...)
+				}
+				buff = append(buff, cause.Error()...)
+			}
+		} else {
+			buff = append(buff, err.Error()...)
+			err = nil
+		}
+		lines = append(lines, string(buff))
+		if err == nil {
+			break
+		}
+	}
+	return lines
+}
+
+// Ideally we'd have a way to check identity, but deep equals will do.
+func sameError(e1, e2 error) bool {
+	return reflect.DeepEqual(e1, e2)
+}

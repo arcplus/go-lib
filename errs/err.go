@@ -17,36 +17,71 @@ type Error struct {
 
 	args []interface{}
 
+	// previous error
+	prev error
+
 	// file and line hold the source code location where the error was
 	// created.
 	file string
 	line int
 }
 
+func new(code ErrCode, message string, args []interface{}, prev error, skip int) *Error {
+	err := &Error{code: code, message: message, args: args, prev: prev}
+	_, err.file, err.line, _ = runtime.Caller(skip + 1)
+	return err
+}
+
 // New is a drop in replacement for the standard library errors module that records
 // the location that the error is created.
 //
 // For example:
-//    return errors.New(401, "missing id")
+//    return errs.New(401, "missing id")
 //
 func New(code ErrCode, message string, args ...interface{}) *Error {
-	err := &Error{code: code, message: message, args: args}
-	_, err.file, err.line, _ = runtime.Caller(1)
-	return err
+	return new(code, message, args, nil, 1)
 }
 
-// NewErr warp err to *Error with code 0 if err is not *Error
-func NewErr(err error) *Error {
+// Wrap wraps err with given code and message
+//
+// For example:
+//  err:=someFunc()
+//  if err!=nil{
+//    return errs.Wrap(err, 500, "internal err")
+// }
+func Wrap(err error, code ErrCode, message string, args ...interface{}) *Error {
 	if err == nil {
 		return nil
 	}
 
-	if v, ok := err.(*Error); ok {
-		return v
+	// add trace info
+	if _, ok := err.(*Error); !ok {
+		err = new(0, err.Error(), nil, nil, 1)
 	}
 
-	inErr := &Error{code: 0, message: err.Error()}
-	_, inErr.file, inErr.line, _ = runtime.Caller(1)
+	return new(code, message, args, err, 1)
+}
+
+// Trace add file and line info to err
+//
+// For example:
+// err:=someFunc()
+// if err!=nil {
+//	return errs.Trace(err)
+// }
+func Trace(err error) *Error {
+	if err == nil {
+		return nil
+	}
+
+	inErr := new(0, "", nil, nil, 1)
+	_, ok := err.(*Error)
+	if !ok {
+		inErr.message = err.Error()
+		return inErr
+	}
+
+	inErr.prev = err
 	return inErr
 }
 
@@ -61,6 +96,32 @@ func (e *Error) Message() string {
 		return fmt.Sprintf(e.message, e.args...)
 	}
 	return e.message
+}
+
+// Underlying returns the Previous error, or nil
+// if there is none.
+func (e *Error) Underlying() error {
+	return e.prev
+}
+
+// Location returns the location where the error is created,
+// implements juju/errors locationer interface.
+func (e *Error) Location() (file string, line int) {
+	return e.file, e.line
+}
+
+// Error implements error interface.
+func (e *Error) Error() string {
+	msg := e.Message()
+	if e.code == 0 {
+		if msg != "" {
+			return msg
+		}
+		if e.prev != nil {
+			return e.prev.Error()
+		}
+	}
+	return fmt.Sprintf("[%d]%s", e.code, msg)
 }
 
 // MarshalJSON implements json.Marshaler interface.
@@ -90,24 +151,6 @@ func (e *Error) UnmarshalJSON(data []byte) error {
 	return nil
 }
 
-// Location returns the location where the error is created,
-// implements juju/errors locationer interface.
-func (e *Error) Location() (file string, line int) {
-	return e.file, e.line
-}
-
-// Error implements error interface.
-func (e *Error) Error() string {
-	return fmt.Sprintf("[%d]%s", e.code, e.Message())
-}
-
-// StackTrace returns one string for each location recorded in the stack of
-// errors. The first value is the originating error, with a line for each
-// other annotation or tracing of the error.
-func (e *Error) StackTrace() string {
-	return ErrorStack(e)
-}
-
 // Equal checks if err is equal to e.
 func (e *Error) Equal(err error) bool {
 	originErr := Cause(err)
@@ -120,57 +163,4 @@ func (e *Error) Equal(err error) bool {
 	}
 	inErr, ok := originErr.(*Error)
 	return ok && e.code == inErr.code
-}
-
-// Equal checks if two errors is equal
-func Equal(err1, err2 error) bool {
-	originErr1, originErr2 := Cause(err1), Cause(err2)
-	if originErr1 == originErr2 {
-		return true
-	}
-
-	if originErr1 == nil || originErr2 == nil {
-		return false
-	}
-
-	// same Error() return
-	if originErr1.Error() == originErr2.Error() {
-		return true
-	}
-
-	inErr1, _ := originErr1.(*Error)
-	inErr2, _ := originErr2.(*Error)
-
-	if inErr1 == nil || inErr2 == nil {
-		return false
-	}
-
-	if inErr1.code == 0 && inErr2.code == 0 {
-		return inErr1.Message() == inErr2.Message()
-	}
-
-	return inErr1.code == inErr2.code
-}
-
-// CodeEqual check err.(*Error).code==code
-func CodeEqual(code ErrCode, err error) bool {
-	v, ok := err.(*Error)
-	if !ok {
-		return false
-	}
-	return v.code == code
-}
-
-// UnWrap unwraps 1st layer err to *Error if possible
-func UnWrap(err error) *Error {
-	if err == nil {
-		return nil
-	}
-
-	v, ok := err.(*Error)
-	if ok {
-		return v
-	}
-
-	return &Error{message: err.Error()}
 }
