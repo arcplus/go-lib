@@ -6,10 +6,10 @@ import (
 
 	"github.com/arcplus/go-lib/errs"
 
-	"github.com/grpc/grpc-go/status"
 	"golang.org/x/net/context"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"
+	"google.golang.org/grpc/status"
 )
 
 // UnaryInterceptorChain build the multi interceptors into one interceptor chain.
