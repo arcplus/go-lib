@@ -164,3 +164,17 @@ func (e *Error) Equal(err error) bool {
 	inErr, ok := originErr.(*Error)
 	return ok && e.code == inErr.code
 }
+
+func SQL(err error) *Error {
+	if err == nil {
+		return nil
+	}
+	return new(1001, err.Error(), nil, nil, 1)
+}
+
+func RDS(err error) *Error {
+	if err == nil {
+		return nil
+	}
+	return new(1002, err.Error(), nil, nil, 1)
+}
