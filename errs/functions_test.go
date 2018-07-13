@@ -103,7 +103,7 @@ func TestCodeEqual(t *testing.T) {
 
 func TestToGRPCErr(t *testing.T) {
 	err := New(404, "not found")
-	t.Log(ToGRPCErr(err))
+	t.Log(ToGRPC(err))
 }
 
 func TestUnWrap(t *testing.T) {
@@ -112,7 +112,7 @@ func TestUnWrap(t *testing.T) {
 		t.Fatal("code should equal")
 	}
 
-	err = ToGRPCErr(err)
+	err = ToGRPC(err)
 	if UnWrap(err).Code() != 404 {
 		t.Fatal("code should equal")
 	}

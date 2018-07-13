@@ -10,14 +10,14 @@ import (
 	"google.golang.org/grpc/status"
 )
 
-// ToGRPCErr convert *Error to gRPC error
-func ToGRPCErr(err error) error {
+// ToGRPC convert *Error to gRPC error
+func ToGRPC(err error) error {
 	if err == nil {
 		return nil
 	}
 
 	if v, ok := err.(*Error); ok {
-		return v.ToGRPCErr()
+		return v.ToGRPC()
 	}
 
 	if s, ok := status.FromError(err); ok {

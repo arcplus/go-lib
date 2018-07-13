@@ -168,7 +168,8 @@ func (e *Error) Equal(err error) bool {
 	return ok && e.code == inErr.code
 }
 
-func (e *Error) ToGRPCErr() error {
+// ToGRPC convert *Error to gRPC error
+func (e *Error) ToGRPC() error {
 	return status.Error(codes.Code(e.code), e.Message())
 }
 
