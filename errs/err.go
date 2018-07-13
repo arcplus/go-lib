@@ -4,6 +4,9 @@ import (
 	"encoding/json"
 	"fmt"
 	"runtime"
+
+	"google.golang.org/grpc/codes"
+	"google.golang.org/grpc/status"
 )
 
 // A Code is an unsigned 32-bit error code
@@ -163,6 +166,10 @@ func (e *Error) Equal(err error) bool {
 	}
 	inErr, ok := originErr.(*Error)
 	return ok && e.code == inErr.code
+}
+
+func (e *Error) ToGRPCErr() error {
+	return status.Error(codes.Code(e.code), e.Message())
 }
 
 func SQL(err error) *Error {

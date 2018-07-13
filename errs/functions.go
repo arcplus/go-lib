@@ -17,7 +17,11 @@ func ToGRPCErr(err error) error {
 	}
 
 	if v, ok := err.(*Error); ok {
-		return status.Error(codes.Code(v.code), v.Message())
+		return v.ToGRPCErr()
+	}
+
+	if s, ok := status.FromError(err); ok {
+		return s.Err()
 	}
 
 	return status.Error(codes.Unknown, err.Error())
