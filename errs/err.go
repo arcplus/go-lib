@@ -173,6 +173,15 @@ func (e *Error) ToGRPC() error {
 	return status.Error(codes.Code(e.code), e.Message())
 }
 
+// Internal for some internal error
+func Internal(err error) *Error {
+	if err == nil {
+		return nil
+	}
+	return new(1000, err.Error(), nil, nil, 1)
+}
+
+// SQL error
 func SQL(err error) *Error {
 	if err == nil {
 		return nil
@@ -180,6 +189,7 @@ func SQL(err error) *Error {
 	return new(1001, err.Error(), nil, nil, 1)
 }
 
+// RDS error
 func RDS(err error) *Error {
 	if err == nil {
 		return nil
