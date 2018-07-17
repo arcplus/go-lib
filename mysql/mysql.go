@@ -68,7 +68,13 @@ func Client(name string) (*sqlx.DB, error) {
 	return client.db, nil
 }
 
-// HealthCheck ping sql
+// Get return mysql client with given name or nil if not exist
+func Get(name string) *sqlx.DB {
+	cli, _ := Client(name)
+	return cli
+}
+
+// HealthCheck ping db
 func HealthCheck() error {
 	errs := make(map[string]error)
 
