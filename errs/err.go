@@ -12,6 +12,8 @@ import (
 // A Code is an unsigned 32-bit error code
 type ErrCode uint32
 
+const ErrUnknown ErrCode = 2
+
 // Error implements error interface and add Code, so
 // errors with different message can be compared.
 type Error struct {
@@ -59,7 +61,7 @@ func Wrap(err error, code ErrCode, message string, args ...interface{}) error {
 
 	// add trace info
 	if _, ok := err.(*Error); !ok {
-		err = new(0, err.Error(), nil, nil, 1)
+		err = new(ErrUnknown, err.Error(), nil, nil, 1)
 	}
 
 	return new(code, message, args, err, 1)
@@ -77,14 +79,17 @@ func Trace(err error) error {
 		return nil
 	}
 
-	inErr := new(0, "", nil, nil, 1)
-	_, ok := err.(*Error)
+	inErr := new(ErrUnknown, "", nil, nil, 1)
+
+	v, ok := err.(*Error)
 	if !ok {
 		inErr.message = err.Error()
-		return inErr
+	} else {
+		inErr.code = v.Code()
+		inErr.message = v.Message()
+		inErr.prev = err
 	}
 
-	inErr.prev = err
 	return inErr
 }
 
@@ -116,7 +121,7 @@ func (e *Error) Location() (file string, line int) {
 // Error implements error interface.
 func (e *Error) Error() string {
 	msg := e.Message()
-	if e.code == 0 {
+	if e.code == ErrUnknown {
 		if msg != "" {
 			return msg
 		}

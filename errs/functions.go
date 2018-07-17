@@ -42,7 +42,7 @@ func UnWrap(err error) *Error {
 		return new(ErrCode(s.Code()), s.Message(), nil, nil, 1)
 	}
 
-	return new(0, err.Error(), nil, nil, 1)
+	return new(ErrUnknown, err.Error(), nil, nil, 1)
 }
 
 // Equal checks if two errors is equal

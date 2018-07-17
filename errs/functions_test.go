@@ -50,7 +50,12 @@ func TestEqual(t *testing.T) {
 			want: true,
 		},
 		{
-			name: "equal testxyz",
+			name: "equal test",
+			args: args{e1: Trace(errors.New("hello")), e2: Trace(errors.New("hello"))},
+			want: true,
+		},
+		{
+			name: "equal test",
 			args: args{e1: errors.New("hello"), e2: Trace(errors.New("hello"))},
 			want: true,
 		},
