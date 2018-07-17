@@ -101,7 +101,7 @@ func TestCodeEqual(t *testing.T) {
 	}
 }
 
-func TestToGRPCErr(t *testing.T) {
+func TestToGRPC(t *testing.T) {
 	err := New(404, "not found")
 	t.Log(ToGRPC(err))
 }

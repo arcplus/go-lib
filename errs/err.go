@@ -52,7 +52,7 @@ func New(code ErrCode, message string, args ...interface{}) *Error {
 //  if err!=nil{
 //    return errs.Wrap(err, 500, "internal err")
 // }
-func Wrap(err error, code ErrCode, message string, args ...interface{}) *Error {
+func Wrap(err error, code ErrCode, message string, args ...interface{}) error {
 	if err == nil {
 		return nil
 	}
@@ -72,7 +72,7 @@ func Wrap(err error, code ErrCode, message string, args ...interface{}) *Error {
 // if err!=nil {
 //	return errs.Trace(err)
 // }
-func Trace(err error) *Error {
+func Trace(err error) error {
 	if err == nil {
 		return nil
 	}
@@ -174,7 +174,7 @@ func (e *Error) ToGRPC() error {
 }
 
 // Internal for some internal error
-func Internal(err error) *Error {
+func Internal(err error) error {
 	if err == nil {
 		return nil
 	}
@@ -182,7 +182,7 @@ func Internal(err error) *Error {
 }
 
 // SQL error
-func SQL(err error) *Error {
+func SQL(err error) error {
 	if err == nil {
 		return nil
 	}
@@ -190,7 +190,7 @@ func SQL(err error) *Error {
 }
 
 // RDS error
-func RDS(err error) *Error {
+func RDS(err error) error {
 	if err == nil {
 		return nil
 	}

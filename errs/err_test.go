@@ -36,3 +36,14 @@ func TestTrace(t *testing.T) {
 	e3 := Trace(e2)
 	t.Log(e3)
 }
+
+func TestInternal(t *testing.T) {
+	var err error
+	if err != nil {
+		t.Fatal("err should be nil")
+	}
+	err = Internal(err)
+	if err != nil {
+		t.Fatal("err should be nil")
+	}
+}
