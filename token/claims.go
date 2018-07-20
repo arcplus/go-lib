@@ -6,7 +6,7 @@ import (
 )
 
 var Version = "1.0"
-var Exipre = time.Hour * 2
+var Expire = time.Hour * 2
 var MaxExpire = time.Hour * 24 * 30
 
 type Claims struct {
@@ -29,7 +29,7 @@ func (c Claims) Valid() error {
 		return ErrVersionInvalid
 	}
 
-	if time.Now().Sub(time.Unix(c.IssuedAt, 0)) > Exipre {
+	if time.Now().Sub(time.Unix(c.IssuedAt, 0)) > Expire {
 		if time.Now().Sub(time.Unix(c.IssuedAt, 0)) < MaxExpire {
 			return ErrNeedRefresh
 		}
