@@ -102,10 +102,19 @@ func Validate(tokenStr string) (*Claims, error) {
 	})
 
 	if err != nil {
-		if err == ErrNeedRefresh {
-			return c, err
-		}
 		return nil, err
+	}
+
+	// logical error
+	if c.Version != Version {
+		return nil, ErrVersionInvalid
+	}
+
+	if time.Now().Sub(time.Unix(c.IssuedAt, 0)) > Expire {
+		if time.Now().Sub(time.Unix(c.IssuedAt, 0)) < MaxExpire {
+			return c, ErrNeedRefresh
+		}
+		return nil, ErrExpired
 	}
 
 	return c, nil

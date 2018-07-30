@@ -25,16 +25,5 @@ var ErrExpired = errors.New("token expired")
 
 // Valid implement jwt Claims interface
 func (c Claims) Valid() error {
-	if c.Version != Version {
-		return ErrVersionInvalid
-	}
-
-	if time.Now().Sub(time.Unix(c.IssuedAt, 0)) > Expire {
-		if time.Now().Sub(time.Unix(c.IssuedAt, 0)) < MaxExpire {
-			return ErrNeedRefresh
-		}
-		return ErrExpired
-	}
-
 	return nil
 }
