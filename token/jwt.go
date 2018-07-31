@@ -107,14 +107,14 @@ func Validate(tokenStr string) (*Claims, error) {
 
 	// logical error
 	if c.Version != Version {
-		return nil, ErrVersionInvalid
+		return c, ErrVersionInvalid
 	}
 
 	if time.Now().Sub(time.Unix(c.IssuedAt, 0)) > Expire {
 		if time.Now().Sub(time.Unix(c.IssuedAt, 0)) < MaxExpire {
 			return c, ErrNeedRefresh
 		}
-		return nil, ErrExpired
+		return c, ErrExpired
 	}
 
 	return c, nil
