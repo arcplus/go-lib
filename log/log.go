@@ -5,6 +5,7 @@ import (
 	"os"
 	"runtime"
 	"strconv"
+	"strings"
 	"sync"
 
 	"github.com/arcplus/go-lib/pool"
@@ -88,7 +89,6 @@ func SetShowLineNum() {
 }
 
 var depth = 2
-
 // SetCallDepth set call depth for show line number.
 func SetCallDepth(n int) {
 	depth = n
@@ -184,6 +184,34 @@ func (l Log) WithStack() Log {
 	return l
 }
 
+type NSQLogger struct {
+}
+
+// nsq logger impl
+func (NSQLogger) Output(calldepth int, s string) error {
+	if len(s) < 5 {
+		return nil
+	}
+
+	if strings.HasPrefix(s, "INF") {
+		Skip(calldepth).Info(s[5:])
+		return nil
+	}
+
+	if strings.HasPrefix(s, "WRN") {
+		Skip(calldepth).Warn(s[5:])
+		return nil
+	}
+
+	if strings.HasPrefix(s, "ERR") {
+		Skip(calldepth).Error(s[5:])
+		return nil
+	}
+
+	Skip(calldepth).Debug(s[5:])
+	return nil
+}
+
 type Context struct {
 	logger *Log
 }
@@ -191,6 +219,12 @@ type Context struct {
 func Sample(sampler Sampler) Log {
 	l := logger
 	l.sampler = sampler
+	return l
+}
+
+func Skip(n int) Log {
+	l := logger
+	l.depth += n
 	return l
 }
 
