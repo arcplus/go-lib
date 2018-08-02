@@ -26,6 +26,7 @@ const (
 	WarnLevel  = zerolog.WarnLevel
 	InfoLevel  = zerolog.InfoLevel
 	ErrorLevel = zerolog.ErrorLevel
+	FatalLevel = zerolog.FatalLevel
 	Disabled   = zerolog.Disabled
 )
 
@@ -154,6 +155,18 @@ func Errorf(format string, v ...interface{}) {
 	l.Errorf(format, v...)
 }
 
+func Fatal(v string) {
+	l := logger
+	l.depth++
+	l.Fatal(v)
+}
+
+func Fatalf(format string, v ...interface{}) {
+	l := logger
+	l.depth++
+	l.Fatalf(format, v...)
+}
+
 func KV(k string, v string) Log {
 	l := logger
 	l.kv = append(l.kv, k, v)
@@ -262,6 +275,15 @@ func (l Log) Error(v string) {
 
 func (l Log) Errorf(format string, v ...interface{}) {
 	l.levelLog(ErrorLevel, format, v...)
+}
+
+func (l Log) Fatal(v string) {
+	l.depth++
+	l.Fatalf(v)
+}
+
+func (l Log) Fatalf(format string, v ...interface{}) {
+	l.levelLog(FatalLevel, format, v...)
 }
 
 func (l Log) levelLog(lv Level, format string, v ...interface{}) {
