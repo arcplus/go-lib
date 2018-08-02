@@ -5,7 +5,10 @@ import (
 	"github.com/arcplus/go-lib/log"
 )
 
-type HandlerFunc func(msg *nsq.Message) error
+// alias
+type Message = nsq.Message
+
+type HandlerFunc func(msg *Message) error
 
 func Subscribe(addr string, config *nsq.Config, topic, channel string, handleFunc HandlerFunc, concurrency int) error {
 	addr, config = getConfig(addr, config)
