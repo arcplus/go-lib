@@ -8,6 +8,7 @@ import (
 	"encoding/hex"
 	"fmt"
 	"hash/crc32"
+	"hash/crc64"
 
 	"golang.org/x/crypto/pbkdf2"
 )
@@ -29,6 +30,14 @@ func Md5Str(str string) string {
 // Crc32 returns crc32 int
 func Crc32(str string) uint32 {
 	return crc32.ChecksumIEEE([]byte(str))
+}
+
+var tabECMA = crc64.MakeTable(crc64.ECMA)
+
+func Crc64(str string) uint64 {
+	hash := crc64.New(tabECMA)
+	hash.Write([]byte(str))
+	return hash.Sum64()
 }
 
 // HashPassword gen hashed password with given salt.
