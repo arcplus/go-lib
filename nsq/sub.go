@@ -5,11 +5,9 @@ import (
 	"github.com/arcplus/go-lib/log"
 )
 
-type Handler interface {
-	HandleMessage(message *nsq.Message) error
-}
+type HandlerFunc func(msg *nsq.Message) error
 
-func Subscribe(addr string, config *nsq.Config, topic, channel string, handler Handler, concurrency int) error {
+func Subscribe(addr string, config *nsq.Config, topic, channel string, handleFunc HandlerFunc, concurrency int) error {
 	addr, config = getConfig(addr, config)
 
 	if channel == "" {
@@ -23,7 +21,7 @@ func Subscribe(addr string, config *nsq.Config, topic, channel string, handler H
 
 	consumer.SetLogger(log.NSQLogger{}, nsq.LogLevelInfo)
 
-	consumer.AddConcurrentHandlers(handler, concurrency)
+	consumer.AddConcurrentHandlers(nsq.HandlerFunc(handleFunc), concurrency)
 
 	return consumer.ConnectToNSQLookupd(addr)
 }
