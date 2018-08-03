@@ -5,7 +5,6 @@ import (
 	"os"
 	"runtime"
 	"strconv"
-	"strings"
 	"sync"
 
 	"github.com/arcplus/go-lib/pool"
@@ -197,34 +196,6 @@ func (l Log) WithStack() Log {
 	return l
 }
 
-type NSQLogger struct {
-}
-
-// nsq logger impl
-func (NSQLogger) Output(calldepth int, s string) error {
-	if len(s) < 5 {
-		return nil
-	}
-
-	if strings.HasPrefix(s, "INF") {
-		Skip(calldepth).Info(s[5:])
-		return nil
-	}
-
-	if strings.HasPrefix(s, "WRN") {
-		Skip(calldepth).Warn(s[5:])
-		return nil
-	}
-
-	if strings.HasPrefix(s, "ERR") {
-		Skip(calldepth).Error(s[5:])
-		return nil
-	}
-
-	Skip(calldepth).Debug(s[5:])
-	return nil
-}
-
 type Context struct {
 	logger *Log
 }
@@ -237,6 +208,11 @@ func Sample(sampler Sampler) Log {
 
 func Skip(n int) Log {
 	l := logger
+	l.depth += n
+	return l
+}
+
+func (l Log) Skip(n int) Log {
 	l.depth += n
 	return l
 }
