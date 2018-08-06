@@ -1,11 +1,11 @@
 package nsq
 
 import (
-	"sync"
 	"errors"
+	"sync"
 
-	"github.com/youzan/go-nsq"
 	"github.com/arcplus/go-lib/log"
+	"github.com/youzan/go-nsq"
 )
 
 var ErrTopicNotRegister = errors.New("topic not register")
@@ -59,4 +59,18 @@ func PublishOrdered(topic string, partitionKey []byte, body []byte) error {
 
 	_, _, _, err = pubMgr.PublishOrdered(topic, partitionKey, body)
 	return err
+}
+
+// Close all conn
+func Close() error {
+	sbm.Range(func(key, val interface{}) bool {
+		val.(*nsq.Consumer).Stop()
+		return true
+	})
+
+	psm.Range(func(key, val interface{}) bool {
+		val.(*nsq.TopicProducerMgr).Stop()
+		return true
+	})
+	return nil
 }
