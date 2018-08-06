@@ -1,6 +1,8 @@
 package scaffold
 
 import (
+	"errors"
+	"fmt"
 	"net"
 	"os"
 	"os/signal"
@@ -46,6 +48,7 @@ func (m *Micro) ServeGRPC(bindAddr string, rpcServer, srv interface{}, opts ...g
 		return
 	}
 
+	// TODO ln already closed by server.GracefulStop()
 	m.AddResCloseFunc(ln.Close)
 
 	opts = append(opts, UnaryInterceptor)
@@ -62,7 +65,12 @@ func (m *Micro) ServeGRPC(bindAddr string, rpcServer, srv interface{}, opts ...g
 		reflect.ValueOf(srv),
 	}
 
-	// TODO maybe should handle panic error
+	defer func() {
+		if err := recover(); err != nil {
+			m.ErrChan <- errors.New(fmt.Sprint(err))
+		}
+	}()
+
 	reflect.ValueOf(rpcServer).Call(params)
 
 	go func() {
