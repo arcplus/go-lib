@@ -1,21 +1,19 @@
 package nsq
 
 import (
-	"errors"
 	"sync"
 
+	"github.com/arcplus/go-lib/errs"
 	"github.com/arcplus/go-lib/log"
 	"github.com/youzan/go-nsq"
 )
-
-var ErrTopicNotRegister = errors.New("topic not register")
 
 var psm = sync.Map{}
 
 func getPubMgr(topic string) (*nsq.TopicProducerMgr, error) {
 	pubMgr, ok := psm.Load(topic)
 	if !ok {
-		return nil, ErrTopicNotRegister
+		return nil, errs.New(401, "topic '%p' not register", topic)
 	}
 	return pubMgr.(*nsq.TopicProducerMgr), nil
 }
