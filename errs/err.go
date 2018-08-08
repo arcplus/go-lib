@@ -248,3 +248,8 @@ func RDS(err error) error {
 	}
 	return new(1002, err.Error(), nil, nil, 1)
 }
+
+// BadRequest error
+func BadRequest(message string, args ...interface{}) error {
+	return new(1003, message, args, nil, 1)
+}
