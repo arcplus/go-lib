@@ -66,8 +66,13 @@ func Close() error {
 		return true
 	})
 
+	pm := map[*nsq.TopicProducerMgr]bool{}
 	psm.Range(func(key, val interface{}) bool {
-		val.(*nsq.TopicProducerMgr).Stop()
+		m := val.(*nsq.TopicProducerMgr)
+		if !pm[m] {
+			m.Stop()
+			pm[m] = true
+		}
 		return true
 	})
 	return nil
