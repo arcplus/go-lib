@@ -2,10 +2,10 @@ package scaffold
 
 import (
 	"context"
-	"log"
 	"runtime"
 
 	"github.com/arcplus/go-lib/errs"
+	"github.com/arcplus/go-lib/log"
 
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"
@@ -50,7 +50,7 @@ func Recovery(ctx context.Context, req interface{}, info *grpc.UnaryServerInfo, 
 		if r := recover(); r != nil {
 			stack := make([]byte, MAXSTACKSIZE)
 			stack = stack[:runtime.Stack(stack, false)]
-			log.Printf("panic grpc invoke: %s, err=%v, stack:\n%s\n", info.FullMethod, r, string(stack))
+			log.Errorf("recover grpc invoke: %s, err=%v, stack:\n%s\n", info.FullMethod, r, string(stack))
 			// if panic, set custom error to 'err', in order that client and sense it.
 			err = status.Errorf(codes.Internal, "panic error: %v", r)
 		}
