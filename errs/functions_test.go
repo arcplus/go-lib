@@ -122,3 +122,19 @@ func TestUnWrap(t *testing.T) {
 		t.Fatal("code should equal")
 	}
 }
+
+func TestAnnotate(t *testing.T) {
+	err1 := errors.New("hello")
+	err1 = Annotate(err1, "world")
+	t.Log(err1)
+	t.Log(StackTrace(err1))
+	err1 = Wrap(err1, 302, "not modify")
+	err1 = Annotate(err1, "world")
+	t.Log(err1)
+	t.Log(StackTrace(err1))
+	func() {
+		defer DeferredAnnotate(&err1, "hello")
+		t.Log(StackTrace(err1))
+	}()
+	t.Log(StackTrace(err1))
+}

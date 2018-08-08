@@ -17,12 +17,12 @@ const ErrUnknown ErrCode = 2
 // Error implements error interface and add Code, so
 // errors with different message can be compared.
 type Error struct {
-	code    ErrCode
+	code    ErrCode // cause
 	message string
 
 	args []interface{}
 
-	// previous error
+	// previous holds the previous error in the error stack, if any.
 	prev error
 
 	// file and line hold the source code location where the error was
@@ -47,7 +47,8 @@ func New(code ErrCode, message string, args ...interface{}) *Error {
 	return new(code, message, args, nil, 1)
 }
 
-// Wrap wraps err with given code and message
+// Wrap changes the code of the error. The location of the Wrap call is also
+// stored in the error stack.
 //
 // For example:
 //  err:=someFunc()
@@ -79,18 +80,64 @@ func Trace(err error) error {
 		return nil
 	}
 
-	inErr := new(ErrUnknown, "", nil, nil, 1)
+	newErr := new(ErrUnknown, "", nil, nil, 1)
 
 	v, ok := err.(*Error)
 	if !ok {
-		inErr.message = err.Error()
+		newErr.message = err.Error()
 	} else {
-		inErr.code = v.Code()
-		inErr.message = v.Message()
-		inErr.prev = err
+		newErr.code = v.Code()
+		newErr.message = v.Message()
+		newErr.prev = err
 	}
 
-	return inErr
+	return newErr
+}
+
+// Annotate is used to add extra context to an existing error. The location of
+// the Annotate call is recorded with the annotations. The file, line and
+// function are also recorded.
+//
+// For example:
+//   if err := SomeFunc(); err != nil {
+//       return errs.Annotate(err, "failed to frombulate")
+//   }
+//
+func Annotate(err error, message string, args ...interface{}) error {
+	if err == nil {
+		return nil
+	}
+
+	newErr := new(ErrUnknown, message, args, err, 1)
+
+	if v, ok := err.(*Error); ok {
+		newErr.code = v.Code()
+	}
+
+	return newErr
+}
+
+// DeferredAnnotate annotates the given error (when it is not nil) with the given
+// format string and arguments (like fmt.Sprintf). If *err is nil, DeferredAnnotatef
+// does nothing. This method is used in a defer statement in order to annotate any
+// resulting error with the same message.
+//
+// For example:
+//
+//    defer DeferredAnnotate(&err, "failed to frombulate the %s", arg)
+//
+func DeferredAnnotate(err *error, message string, args ...interface{}) {
+	if *err == nil {
+		return
+	}
+
+	newErr := new(ErrUnknown, message, args, *err, 1)
+
+	if v, ok := (*err).(*Error); ok {
+		newErr.code = v.Code()
+	}
+
+	*err = newErr
 }
 
 // Code returns ErrCode
