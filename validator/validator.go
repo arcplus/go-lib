@@ -33,25 +33,25 @@ func Validate(req interface{}, constraints ...string) error {
 		rv := rv
 
 		nodes := strings.Split(nodeName, ".")
-		for i, node := range nodes {
+		for _, node := range nodes {
 			rv, err = valueWalker(rv, node)
 			if err != nil {
-				return fmt.Errorf("failed with '%s' %s", strings.Join(nodes[:i+1], "."), err.Error())
+				return fmt.Errorf("field '%s' failed with %s", nodeName, err.Error())
 			}
 		}
 
 		if funcName == "" {
 			if !normalValidate(rv) {
-				return fmt.Errorf("failed with '%s' should not empty", c)
+				return fmt.Errorf("field '%s' failed with should not empty", nodeName)
 			}
 		} else {
 			if f, ok := funcMap[funcName]; ok && f != nil {
 				err = f(rv, funcParams)
 				if err != nil {
-					return fmt.Errorf("failed with %s '%s'", err, c)
+					return fmt.Errorf("field '%s' failed with %s '%s'", nodeName, err, c)
 				}
 			} else {
-				return fmt.Errorf("failed with func '%s' not exist", funcName)
+				return fmt.Errorf("field '%s' failed with func '%s' not exist", nodeName, funcName)
 			}
 		}
 	}
@@ -116,7 +116,7 @@ func valueWalker(rv reflect.Value, node string) (reflect.Value, error) {
 		}
 		return reflect.Indirect(rv), nil
 	case reflect.Invalid:
-		return rv, errors.New("parent invalid '" + node + "'")
+		return rv, errors.New("'" + node + "' parent invalid")
 	case reflect.Interface:
 		return valueWalker(rv.Elem(), node)
 	}
@@ -133,9 +133,10 @@ func underscoreToCamelCase(s string) string {
 type ValidateFunc func(rv reflect.Value, p string) error
 
 var funcMap = map[string]ValidateFunc{
-	"range": length,
-	"in":    in,
-	"each":  each,
+	"range":   length,
+	"in":      in,
+	"each":    each,
+	"default": defaultValue,
 }
 
 // Register add new ValidateFunc
@@ -220,6 +221,45 @@ func each(rv reflect.Value, p string) error {
 		}
 	case reflect.Map:
 
+	}
+	return nil
+}
+
+// defaultValue set rv to
+func defaultValue(rv reflect.Value, p string) error {
+	if !rv.CanSet() {
+		return errors.New("not settable")
+	}
+
+	switch rv.Kind() {
+	case reflect.String:
+		rv.SetString(p)
+	case reflect.Int, reflect.Int64, reflect.Int32, reflect.Int16, reflect.Int8:
+		v, err := strconv.ParseInt(p, 10, 64)
+		if err != nil {
+			return err
+		}
+		rv.SetInt(v)
+	case reflect.Uint, reflect.Uint64, reflect.Uint32, reflect.Uint16, reflect.Uint8:
+		v, err := strconv.ParseUint(p, 10, 64)
+		if err != nil {
+			return err
+		}
+		rv.SetUint(v)
+	case reflect.Float64, reflect.Float32:
+		v, err := strconv.ParseFloat(p, 64)
+		if err != nil {
+			return err
+		}
+		rv.SetFloat(v)
+	case reflect.Bool:
+		b, err := strconv.ParseBool(p)
+		if err != nil {
+			return err
+		}
+		rv.SetBool(b)
+	default:
+		return errors.New(rv.Kind().String() + " not support now")
 	}
 	return nil
 }

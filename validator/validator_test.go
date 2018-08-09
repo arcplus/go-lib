@@ -198,6 +198,20 @@ func TestValidateFunc(t *testing.T) {
 		t.Fatal("should be b not empty err")
 	}
 	t.Log(err)
+
+	type b int32
+	type c float32
+	type x struct {
+		Name string
+		Age  int
+		B    b
+		C    c
+		D    *int
+	}
+
+	m := x{}
+	err = Validate(m, "name:default(elvizlai)", "age:default(18)", "b:default(30)", "c:default(3.14)")
+	t.Log(err, m)
 }
 
 func TestValidateX(t *testing.T) {
