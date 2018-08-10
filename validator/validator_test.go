@@ -202,15 +202,17 @@ func TestValidateFunc(t *testing.T) {
 	type b int32
 	type c float32
 	type x struct {
-		Name string
-		Age  int
-		B    b
-		C    c
-		D    *int
+		Name   string
+		Age    int
+		B      b
+		Remark string
 	}
 
-	m := x{}
-	err = Validate(m, "name:default(elvizlai)", "age:default(18)", "b:default(30)", "c:default(3.14)")
+	m := &x{
+		Age:    18,
+		Remark: "forever young",
+	}
+	err = Validate(m, "name:default(elvizlai)", "age:default(20)", "remark:default(old)", "b:default(3)")
 	t.Log(err, m)
 }
 

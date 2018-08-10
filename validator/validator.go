@@ -233,31 +233,33 @@ func defaultValue(rv reflect.Value, p string) error {
 
 	switch rv.Kind() {
 	case reflect.String:
-		rv.SetString(p)
+		if rv.String() == "" {
+			rv.SetString(p)
+		}
 	case reflect.Int, reflect.Int64, reflect.Int32, reflect.Int16, reflect.Int8:
-		v, err := strconv.ParseInt(p, 10, 64)
-		if err != nil {
-			return err
+		if rv.Int() == 0 {
+			v, err := strconv.ParseInt(p, 10, 64)
+			if err != nil {
+				return err
+			}
+			rv.SetInt(v)
 		}
-		rv.SetInt(v)
 	case reflect.Uint, reflect.Uint64, reflect.Uint32, reflect.Uint16, reflect.Uint8:
-		v, err := strconv.ParseUint(p, 10, 64)
-		if err != nil {
-			return err
+		if rv.Uint() == 0 {
+			v, err := strconv.ParseUint(p, 10, 64)
+			if err != nil {
+				return err
+			}
+			rv.SetUint(v)
 		}
-		rv.SetUint(v)
 	case reflect.Float64, reflect.Float32:
-		v, err := strconv.ParseFloat(p, 64)
-		if err != nil {
-			return err
+		if rv.Float() == 0 {
+			v, err := strconv.ParseFloat(p, 64)
+			if err != nil {
+				return err
+			}
+			rv.SetFloat(v)
 		}
-		rv.SetFloat(v)
-	case reflect.Bool:
-		b, err := strconv.ParseBool(p)
-		if err != nil {
-			return err
-		}
-		rv.SetBool(b)
 	default:
 		return errors.New(rv.Kind().String() + " not support now")
 	}
