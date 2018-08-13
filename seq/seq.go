@@ -18,8 +18,14 @@ func init() {
 	}
 }
 
-// NextID return an unique id
+// NextID return an unique id str
 func NextID() string {
 	id, _ := sf.NextID()
 	return strconv.FormatUint(id, 10)
+}
+
+// NextNumID returns number id
+func NextNumID() uint64 {
+	id, _ := sf.NextID()
+	return id
 }
