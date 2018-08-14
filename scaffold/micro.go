@@ -48,8 +48,16 @@ func (m *Micro) ServeGRPC(bindAddr string, rpcServer, srv interface{}, opts ...g
 		return
 	}
 
-	// TODO ln already closed by server.GracefulStop()
-	m.AddResCloseFunc(ln.Close)
+	m.AddResCloseFunc(func() error {
+		err := ln.Close()
+		if err != nil {
+			if _, ok := err.(*net.OpError); ok {
+				return nil
+			}
+			return err
+		}
+		return nil
+	})
 
 	opts = append(opts, UnaryInterceptor)
 
