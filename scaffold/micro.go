@@ -12,6 +12,7 @@ import (
 
 	"github.com/arcplus/go-lib/log"
 	"google.golang.org/grpc"
+	"google.golang.org/grpc/reflection"
 )
 
 // TODO config file
@@ -62,6 +63,8 @@ func (m *Micro) ServeGRPC(bindAddr string, rpcServer, srv interface{}, opts ...g
 	opts = append(opts, UnaryInterceptor)
 
 	server := grpc.NewServer(opts...)
+	// TODO any way to disable this?
+	reflection.Register(server)
 
 	m.AddResCloseFunc(func() error {
 		server.GracefulStop()
