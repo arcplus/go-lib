@@ -30,7 +30,7 @@ func SubscribeHandler(addr string, config *nsq.Config, topic, channel string, ha
 
 	sbm.Store(topic+":"+channel, consumer)
 
-	consumer.SetLogger(log.NSQLogger{}, nsq.LogLevelInfo)
+	consumer.SetLogger(log.NSQLogger{}, nsq.LogLevelWarning)
 
 	consumer.AddConcurrentHandlers(handler, concurrency)
 

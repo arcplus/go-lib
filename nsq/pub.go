@@ -26,7 +26,7 @@ func RegisterPub(addr string, config *nsq.Config, topics ...string) error {
 		return err
 	}
 
-	pubMgr.SetLogger(log.NSQLogger{}, nsq.LogLevelInfo)
+	pubMgr.SetLogger(log.NSQLogger{}, nsq.LogLevelWarning)
 
 	err = pubMgr.ConnectToNSQLookupd(addr)
 	if err != nil {
