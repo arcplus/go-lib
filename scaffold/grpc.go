@@ -35,6 +35,7 @@ func WrapError(ctx context.Context, req interface{}, info *grpc.UnaryServerInfo,
 	resp, err = handler(ctx, req)
 	if err != nil {
 		err = errs.ToGRPC(err)
+		log.Errorf("method:%s, err:%s", info.FullMethod, err.Error())
 	}
 	return resp, err
 }
