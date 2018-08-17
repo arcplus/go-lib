@@ -6,6 +6,7 @@ import (
 
 	"github.com/arcplus/go-lib/errs"
 	"github.com/arcplus/go-lib/log"
+	"github.com/arcplus/go-lib/tool"
 
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"
@@ -35,7 +36,8 @@ func WrapError(ctx context.Context, req interface{}, info *grpc.UnaryServerInfo,
 	resp, err = handler(ctx, req)
 	if err != nil {
 		err = errs.ToGRPC(err)
-		log.Errorf("method:%s, err:%s", info.FullMethod, err.Error())
+		// TODO req may be changed by handler.
+		log.Errorf("method:%s, err:%s, req:%s", info.FullMethod, err.Error(), tool.MarshalToString(req))
 	}
 	return resp, err
 }
