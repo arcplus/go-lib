@@ -89,6 +89,7 @@ func SetShowLineNum() {
 }
 
 var depth = 2
+
 // SetCallDepth set call depth for show line number.
 func SetCallDepth(n int) {
 	depth = n

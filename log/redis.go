@@ -34,7 +34,12 @@ func RedisWriter(conf RedisConfig) io.Writer {
 		wr := NewWriter(conf.Level, conf, 1000, 10*time.Millisecond, func(missed int) {
 			log.Printf("Logger Dropped %d messages", missed)
 		})
-		asyncWaitList = append(asyncWaitList, wr.Close)
+
+		asyncWaitList = append(asyncWaitList, func() error {
+			wr.Close()
+			conf.client.Close()
+			return nil
+		})
 		return wr
 	}
 
