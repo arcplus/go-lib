@@ -253,3 +253,8 @@ func RDS(err error) error {
 func BadRequest(message string, args ...interface{}) error {
 	return new(1003, message, args, nil, 1)
 }
+
+// UnAuthorized error
+func UnAuthorized(message string, args ...interface{}) error {
+	return new(1004, message, args, nil, 1)
+}

@@ -47,3 +47,8 @@ func TestInternal(t *testing.T) {
 		t.Fatal("err should be nil")
 	}
 }
+
+func TestUnAuthorized(t *testing.T) {
+	err := UnAuthorized("unauth:%s", "missing passwd")
+	t.Log(err)
+}
