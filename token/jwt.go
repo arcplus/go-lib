@@ -87,20 +87,13 @@ func (c *Claims) Sign() string {
 	c.Version = Version
 	c.IssuedAt = time.Now().Unix()
 
-	tokenStr, err := jwt.NewWithClaims(jwt.SigningMethodRS256, c).SignedString(privateKey)
-	if err != nil {
-		panic(err)
-	}
-	return tokenStr
+	return Sign(c)
 }
 
 // Validate convert token str to *Claims if possible
 func Validate(tokenStr string) (*Claims, error) {
 	c := &Claims{}
-	_, err := jwt.ParseWithClaims(tokenStr, c, func(token *jwt.Token) (interface{}, error) {
-		return publicKey, nil
-	})
-
+	err := Parse(tokenStr, c)
 	if err != nil {
 		return nil, err
 	}
@@ -118,4 +111,19 @@ func Validate(tokenStr string) (*Claims, error) {
 	}
 
 	return c, nil
+}
+
+func Parse(tokenStr string, c jwt.Claims) error {
+	_, err := jwt.ParseWithClaims(tokenStr, c, func(token *jwt.Token) (interface{}, error) {
+		return publicKey, nil
+	})
+	return err
+}
+
+func Sign(c jwt.Claims) string {
+	tokenStr, err := jwt.NewWithClaims(jwt.SigningMethodRS256, c).SignedString(privateKey)
+	if err != nil {
+		panic(err)
+	}
+	return tokenStr
 }

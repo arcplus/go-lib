@@ -4,7 +4,7 @@ import (
 	"testing"
 )
 
-func TestSign(t *testing.T) {
+func TestSignAndValidate(t *testing.T) {
 	Check()
 	c := Claims{
 		Issuer:  "sso",
