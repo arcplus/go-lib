@@ -94,7 +94,7 @@ func (m *Micro) ServeGRPC(bindAddr string, rpcServer, srv interface{}, opts ...g
 
 // FILO
 func (m *Micro) releaseRes() {
-	for i := len(m.resCloseFuncs) - 1; i > 0; i-- {
+	for i := len(m.resCloseFuncs) - 1; i >= 0; i-- {
 		if f := m.resCloseFuncs[i]; f != nil {
 			err := f()
 			if err != nil {
