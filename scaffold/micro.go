@@ -1,6 +1,7 @@
 package scaffold
 
 import (
+	"bytes"
 	"context"
 	"errors"
 	"fmt"
@@ -91,6 +92,78 @@ func (m *Micro) ServeGRPC(bindAddr string, rpcServer, srv interface{}, opts ...g
 		}
 	}()
 
+	// check is impl (TODO: optimize)
+	if !reflect.TypeOf(srv).Implements(reflect.TypeOf(rpcServer).In(1)) {
+		xMap := make(map[string]reflect.Type)
+
+		svcRef := reflect.TypeOf(srv)
+		for i, l := 0, svcRef.NumMethod(); i < l; i++ {
+			xMap[svcRef.Method(i).Name] = svcRef.Method(i).Type
+		}
+
+		rpcRef := reflect.TypeOf(rpcServer).In(1)
+		for i, l := 0, rpcRef.NumMethod(); i < l; i++ {
+			method := rpcRef.Method(i)
+
+			t, ok := xMap[method.Name]
+			if !ok {
+				m.errChan <- fmt.Errorf("rpc method %q missing", method.Name)
+				return
+			}
+
+			if method.Type.NumIn() != t.NumIn()-1 {
+				m.errChan <- fmt.Errorf("rpc method %q want:%s, have:%s", method.Name, method.Type, t)
+				return
+			}
+
+			rpcBuff := &bytes.Buffer{}
+			rpcBuff.WriteString("func(")
+			implBuff := &bytes.Buffer{}
+			implBuff.WriteString("func(")
+
+			var failed bool
+			for i, l := 0, method.Type.NumIn(); i < l; i++ {
+				if method.Type.In(i) != t.In(i+1) {
+					failed = true
+				}
+
+				rpcBuff.WriteString(method.Type.In(i).String())
+				implBuff.WriteString(t.In(i + 1).String())
+				if i != l-1 {
+					rpcBuff.WriteString(", ")
+					implBuff.WriteString(", ")
+				} else {
+					rpcBuff.WriteString(") (")
+					implBuff.WriteString(") (")
+				}
+			}
+
+			for i, l := 0, method.Type.NumOut(); i < l; i++ {
+				if method.Type.Out(i) != t.Out(i) {
+					failed = true
+				}
+
+				rpcBuff.WriteString(method.Type.Out(i).String())
+				implBuff.WriteString(t.Out(i).String())
+				if i != l-1 {
+					rpcBuff.WriteString(", ")
+					implBuff.WriteString(", ")
+				} else {
+					rpcBuff.WriteString(")")
+					implBuff.WriteString(")")
+				}
+			}
+
+			if failed {
+				m.errChan <- fmt.Errorf("rpc method %q want:%s, have:%s", method.Name, rpcBuff.String(), implBuff.String())
+				return
+			}
+		}
+
+		m.errChan <- errors.New("rpc impl error")
+		return
+	}
+
 	reflect.ValueOf(rpcServer).Call(params)
 
 	go func() {
@@ -152,8 +225,8 @@ func (m *Micro) Start() {
 	signal.Notify(ch, WatchSignal...)
 	select {
 	case s := <-ch:
-		log.Infof("receive signal: '%v'", s)
+		log.Infof("receive stop signal: %s", s)
 	case e := <-m.errChan:
-		log.Errorf("receive err signal: '%v'", e)
+		log.Errorf("receive err signal: %s", e)
 	}
 }
