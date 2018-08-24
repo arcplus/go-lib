@@ -17,30 +17,29 @@ import (
 	"google.golang.org/grpc"
 )
 
-// TODO config file
 type Micro struct {
-	*sync.Mutex
-	ErrChan       chan error
+	mu            *sync.Mutex
+	errChan       chan error
 	resCloseFuncs []func() error // for close func list
 }
 
 func NewMicro() *Micro {
 	m := &Micro{
-		Mutex:         &sync.Mutex{},
-		ErrChan:       make(chan error, 1),
+		mu:            &sync.Mutex{},
+		errChan:       make(chan error, 1),
 		resCloseFuncs: make([]func() error, 0, 8),
 	}
 
-	m.resCloseFuncs = append(m.resCloseFuncs, log.Close)
+	m.AddResCloseFunc(log.Close)
 
 	return m
 }
 
 // AddResCloseFunc add ResCloseFunc
 func (m *Micro) AddResCloseFunc(f func() error) {
-	m.Lock()
+	m.mu.Lock()
 	m.resCloseFuncs = append(m.resCloseFuncs, f)
-	m.Unlock()
+	m.mu.Unlock()
 }
 
 // TODO ln reuse?
@@ -68,7 +67,7 @@ func (m *Micro) createListener(bindAddr string) (net.Listener, error) {
 func (m *Micro) ServeGRPC(bindAddr string, rpcServer, srv interface{}, opts ...grpc.ServerOption) {
 	ln, err := m.createListener(bindAddr)
 	if err != nil {
-		m.ErrChan <- err
+		m.errChan <- err
 		return
 	}
 
@@ -88,7 +87,7 @@ func (m *Micro) ServeGRPC(bindAddr string, rpcServer, srv interface{}, opts ...g
 
 	defer func() {
 		if err := recover(); err != nil {
-			m.ErrChan <- errors.New(fmt.Sprint(err))
+			m.errChan <- errors.New(fmt.Sprint(err))
 		}
 	}()
 
@@ -97,7 +96,7 @@ func (m *Micro) ServeGRPC(bindAddr string, rpcServer, srv interface{}, opts ...g
 	go func() {
 		err := server.Serve(ln)
 		if err != nil {
-			m.ErrChan <- err
+			m.errChan <- err
 		}
 	}()
 }
@@ -106,7 +105,7 @@ func (m *Micro) ServeGRPC(bindAddr string, rpcServer, srv interface{}, opts ...g
 func (m *Micro) ServeHTTP(bindAddr string, handler http.Handler) {
 	ln, err := m.createListener(bindAddr)
 	if err != nil {
-		m.ErrChan <- err
+		m.errChan <- err
 		return
 	}
 
@@ -126,7 +125,7 @@ func (m *Micro) ServeHTTP(bindAddr string, handler http.Handler) {
 	go func() {
 		err := server.Serve(ln)
 		if err != nil {
-			m.ErrChan <- err
+			m.errChan <- err
 		}
 	}()
 }
@@ -154,7 +153,7 @@ func (m *Micro) Start() {
 	select {
 	case s := <-ch:
 		log.Infof("receive signal: '%v'", s)
-	case e := <-m.ErrChan:
+	case e := <-m.errChan:
 		log.Errorf("receive err signal: '%v'", e)
 	}
 }
