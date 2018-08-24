@@ -1,18 +1,20 @@
 package scaffold
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"net"
+	"net/http"
 	"os"
 	"os/signal"
 	"reflect"
 	"sync"
 	"syscall"
+	"time"
 
 	"github.com/arcplus/go-lib/log"
 	"google.golang.org/grpc"
-	"google.golang.org/grpc/reflection"
 )
 
 // TODO config file
@@ -41,12 +43,11 @@ func (m *Micro) AddResCloseFunc(f func() error) {
 	m.Unlock()
 }
 
-// ServeGRPC is helper func to start gRPC server
-func (m *Micro) ServeGRPC(bindAddr string, rpcServer, srv interface{}, opts ...grpc.ServerOption) {
+// TODO ln reuse?
+func (m *Micro) createListener(bindAddr string) (net.Listener, error) {
 	ln, err := net.Listen("tcp", bindAddr)
 	if err != nil {
-		m.ErrChan <- err
-		return
+		return nil, err
 	}
 
 	m.AddResCloseFunc(func() error {
@@ -60,11 +61,20 @@ func (m *Micro) ServeGRPC(bindAddr string, rpcServer, srv interface{}, opts ...g
 		return nil
 	})
 
+	return ln, nil
+}
+
+// ServeGRPC is helper func to start gRPC server
+func (m *Micro) ServeGRPC(bindAddr string, rpcServer, srv interface{}, opts ...grpc.ServerOption) {
+	ln, err := m.createListener(bindAddr)
+	if err != nil {
+		m.ErrChan <- err
+		return
+	}
+
 	opts = append(opts, UnaryInterceptor)
 
 	server := grpc.NewServer(opts...)
-	// TODO any way to disable this?
-	reflection.Register(server)
 
 	m.AddResCloseFunc(func() error {
 		server.GracefulStop()
@@ -83,6 +93,35 @@ func (m *Micro) ServeGRPC(bindAddr string, rpcServer, srv interface{}, opts ...g
 	}()
 
 	reflect.ValueOf(rpcServer).Call(params)
+
+	go func() {
+		err := server.Serve(ln)
+		if err != nil {
+			m.ErrChan <- err
+		}
+	}()
+}
+
+// TODO other params can optimize
+func (m *Micro) ServeHTTP(bindAddr string, handler http.Handler) {
+	ln, err := m.createListener(bindAddr)
+	if err != nil {
+		m.ErrChan <- err
+		return
+	}
+
+	server := &http.Server{
+		Handler:        handler,
+		ReadTimeout:    30 * time.Second,
+		WriteTimeout:   30 * time.Second,
+		MaxHeaderBytes: 2 << 15, // 64k
+	}
+
+	m.AddResCloseFunc(func() error {
+		ctx, cancelFunc := context.WithTimeout(context.Background(), time.Second*30)
+		defer cancelFunc()
+		return server.Shutdown(ctx)
+	})
 
 	go func() {
 		err := server.Serve(ln)
