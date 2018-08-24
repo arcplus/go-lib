@@ -1,6 +1,7 @@
 package router
 
 import (
+	"context"
 	"net/http"
 
 	"github.com/julienschmidt/httprouter"
@@ -118,4 +119,15 @@ func (r *Router) PanicHandler(handler func(http.ResponseWriter, *http.Request, i
 // ServeHTTP serve http
 func (r *Router) ServeHTTP(rw http.ResponseWriter, req *http.Request) {
 	r.router.ServeHTTP(rw, req)
+}
+
+// GetParams get params from request or request.Context()
+func GetParams(r interface{}) httprouter.Params {
+	switch v := r.(type) {
+	case *http.Request:
+		return httprouter.ParamsFromContext(v.Context())
+	case context.Context:
+		return httprouter.ParamsFromContext(v)
+	}
+	return nil
 }
