@@ -1,15 +1,11 @@
 package scaffold
 
 import (
-	"bytes"
 	"context"
-	"errors"
-	"fmt"
 	"net"
 	"net/http"
 	"os"
 	"os/signal"
-	"reflect"
 	"sync"
 	"syscall"
 	"time"
@@ -21,6 +17,7 @@ import (
 type Micro struct {
 	mu            *sync.Mutex
 	errChan       chan error
+	serveFuncs    []func()
 	resCloseFuncs []func() error // for close func list
 }
 
@@ -28,6 +25,7 @@ func NewMicro() *Micro {
 	m := &Micro{
 		mu:            &sync.Mutex{},
 		errChan:       make(chan error, 1),
+		serveFuncs:    make([]func(), 0),
 		resCloseFuncs: make([]func() error, 0, 8),
 	}
 
@@ -36,19 +34,27 @@ func NewMicro() *Micro {
 	return m
 }
 
-// AddResCloseFunc add ResCloseFunc
-func (m *Micro) AddResCloseFunc(f func() error) {
-	m.mu.Lock()
-	m.resCloseFuncs = append(m.resCloseFuncs, f)
-	m.mu.Unlock()
+// FILO
+func (m *Micro) releaseRes() {
+	for i := len(m.resCloseFuncs) - 1; i >= 0; i-- {
+		if f := m.resCloseFuncs[i]; f != nil {
+			err := f()
+			if err != nil {
+				log.Errorf("release res err: %s", err.Error())
+			}
+		}
+	}
 }
 
 // TODO ln reuse?
 func (m *Micro) createListener(bindAddr string) (net.Listener, error) {
+	m.mu.Lock()
 	ln, err := net.Listen("tcp", bindAddr)
 	if err != nil {
+		m.mu.Unlock()
 		return nil, err
 	}
+	m.mu.Unlock()
 
 	m.AddResCloseFunc(func() error {
 		err := ln.Close()
@@ -64,157 +70,63 @@ func (m *Micro) createListener(bindAddr string) (net.Listener, error) {
 	return ln, nil
 }
 
+// AddResCloseFunc add ResCloseFunc
+func (m *Micro) AddResCloseFunc(f func() error) {
+	m.mu.Lock()
+	m.resCloseFuncs = append(m.resCloseFuncs, f)
+	m.mu.Unlock()
+}
+
 // ServeGRPC is helper func to start gRPC server
-func (m *Micro) ServeGRPC(bindAddr string, rpcServer, srv interface{}, opts ...grpc.ServerOption) {
-	ln, err := m.createListener(bindAddr)
-	if err != nil {
-		m.errChan <- err
-		return
-	}
-
-	opts = append(opts, UnaryInterceptor)
-
-	server := grpc.NewServer(opts...)
-
-	m.AddResCloseFunc(func() error {
-		server.GracefulStop()
-		return nil
-	})
-
-	params := []reflect.Value{
-		reflect.ValueOf(server),
-		reflect.ValueOf(srv),
-	}
-
-	defer func() {
-		if err := recover(); err != nil {
-			m.errChan <- errors.New(fmt.Sprint(err))
-		}
-	}()
-
-	// check is impl (TODO: optimize)
-	if !reflect.TypeOf(srv).Implements(reflect.TypeOf(rpcServer).In(1)) {
-		xMap := make(map[string]reflect.Type)
-
-		svcRef := reflect.TypeOf(srv)
-		for i, l := 0, svcRef.NumMethod(); i < l; i++ {
-			xMap[svcRef.Method(i).Name] = svcRef.Method(i).Type
+func (m *Micro) ServeGRPC(bindAddr string, server *grpc.Server) {
+	m.serveFuncs = append(m.serveFuncs, func() {
+		ln, err := m.createListener(bindAddr)
+		if err != nil {
+			m.errChan <- err
+			return
 		}
 
-		rpcRef := reflect.TypeOf(rpcServer).In(1)
-		for i, l := 0, rpcRef.NumMethod(); i < l; i++ {
-			method := rpcRef.Method(i)
+		m.AddResCloseFunc(func() error {
+			server.GracefulStop()
+			return nil
+		})
 
-			t, ok := xMap[method.Name]
-			if !ok {
-				m.errChan <- fmt.Errorf("rpc method %q missing", method.Name)
-				return
-			}
+		log.Debugf("grpc version: %s", grpc.Version)
 
-			if method.Type.NumIn() != t.NumIn()-1 {
-				m.errChan <- fmt.Errorf("rpc method %q want: %s, have: %s", method.Name, method.Type, t)
-				return
-			}
-
-			rpcBuff := &bytes.Buffer{}
-			rpcBuff.WriteString("func(")
-			implBuff := &bytes.Buffer{}
-			implBuff.WriteString("func(")
-
-			var failed bool
-			for i, l := 0, method.Type.NumIn(); i < l; i++ {
-				if method.Type.In(i) != t.In(i+1) {
-					failed = true
-				}
-
-				rpcBuff.WriteString(method.Type.In(i).String())
-				implBuff.WriteString(t.In(i + 1).String())
-				if i != l-1 {
-					rpcBuff.WriteString(", ")
-					implBuff.WriteString(", ")
-				} else {
-					rpcBuff.WriteString(") (")
-					implBuff.WriteString(") (")
-				}
-			}
-
-			for i, l := 0, method.Type.NumOut(); i < l; i++ {
-				if method.Type.Out(i) != t.Out(i) {
-					failed = true
-				}
-
-				rpcBuff.WriteString(method.Type.Out(i).String())
-				implBuff.WriteString(t.Out(i).String())
-				if i != l-1 {
-					rpcBuff.WriteString(", ")
-					implBuff.WriteString(", ")
-				} else {
-					rpcBuff.WriteString(")")
-					implBuff.WriteString(")")
-				}
-			}
-
-			if failed {
-				m.errChan <- fmt.Errorf("rpc method %q want: %s, have: %s", method.Name, rpcBuff.String(), implBuff.String())
-				return
-			}
-		}
-
-		m.errChan <- errors.New("rpc impl error")
-		return
-	}
-
-	reflect.ValueOf(rpcServer).Call(params)
-
-	log.Debugf("grpc version: %s", grpc.Version)
-
-	go func() {
-		err := server.Serve(ln)
+		err = server.Serve(ln)
 		if err != nil {
 			m.errChan <- err
 		}
-	}()
+	})
 }
 
 // TODO other params can optimize
 func (m *Micro) ServeHTTP(bindAddr string, handler http.Handler) {
-	ln, err := m.createListener(bindAddr)
-	if err != nil {
-		m.errChan <- err
-		return
-	}
+	m.serveFuncs = append(m.serveFuncs, func() {
+		ln, err := m.createListener(bindAddr)
+		if err != nil {
+			m.errChan <- err
+			return
+		}
 
-	server := &http.Server{
-		Handler:        handler,
-		ReadTimeout:    30 * time.Second,
-		WriteTimeout:   30 * time.Second,
-		MaxHeaderBytes: 2 << 15, // 64k
-	}
+		server := &http.Server{
+			Handler:        handler,
+			ReadTimeout:    30 * time.Second,
+			WriteTimeout:   30 * time.Second,
+			MaxHeaderBytes: 2 << 15, // 64k
+		}
 
-	m.AddResCloseFunc(func() error {
-		ctx, cancelFunc := context.WithTimeout(context.Background(), time.Second*30)
-		defer cancelFunc()
-		return server.Shutdown(ctx)
-	})
+		m.AddResCloseFunc(func() error {
+			ctx, cancelFunc := context.WithTimeout(context.Background(), time.Second*30)
+			defer cancelFunc()
+			return server.Shutdown(ctx)
+		})
 
-	go func() {
-		err := server.Serve(ln)
+		err = server.Serve(ln)
 		if err != nil {
 			m.errChan <- err
 		}
-	}()
-}
-
-// FILO
-func (m *Micro) releaseRes() {
-	for i := len(m.resCloseFuncs) - 1; i >= 0; i-- {
-		if f := m.resCloseFuncs[i]; f != nil {
-			err := f()
-			if err != nil {
-				log.Errorf("release res err: %s", err.Error())
-			}
-		}
-	}
+	})
 }
 
 // WatchSignal notify signal to stop running
@@ -223,6 +135,11 @@ var WatchSignal = []os.Signal{syscall.SIGTERM, syscall.SIGINT, syscall.SIGKILL, 
 // Wait util signal
 func (m *Micro) Start() {
 	defer m.releaseRes()
+
+	for i := range m.serveFuncs {
+		go m.serveFuncs[i]()
+	}
+
 	ch := make(chan os.Signal, 1)
 	signal.Notify(ch, WatchSignal...)
 	select {
