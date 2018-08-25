@@ -5,8 +5,6 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"testing"
-
-	"github.com/urfave/negroni"
 )
 
 func TestHandler(t *testing.T) {
@@ -16,10 +14,15 @@ func TestHandler(t *testing.T) {
 		rw.WriteHeader(http.StatusTeapot)
 	}
 
+	hx := func(rw http.ResponseWriter, _ *http.Request, ps Params) {
+		rw.Write([]byte(ps.ByName("id")))
+	}
+
 	router.Handler("GET", "/", Wrap(h))
 	router.Handler("GET", "/hello", Wrap(h))
 	router.Handler("GET", "/hello/world", Wrap(h))
 	router.Handler("GET", "/hello/world/elvizlai", Wrap(h))
+	router.Handler("GET", "/ping/:id", WrapX(hx))
 
 	r := httptest.NewRequest("GET", "/", nil)
 	rw := httptest.NewRecorder()
@@ -58,12 +61,19 @@ func TestHandler(t *testing.T) {
 	if rw.Header().Get("Location") != "/hello/world/elvizlai" {
 		t.Error("Test Handle failed", rw.Header())
 	}
+
+	r = httptest.NewRequest("GET", "/ping/123456", nil)
+	rw = httptest.NewRecorder()
+	router.ServeHTTP(rw, r)
+	if rw.Body.String() != "123456" {
+		t.Error("resp body should equal req id")
+	}
 }
 
 func TestMiddleware(t *testing.T) {
 	router := New()
 
-	router.UseFunc(func() negroni.HandlerFunc {
+	router.UseFunc(func() HandlerFunc {
 		return func(rw http.ResponseWriter, r *http.Request, next http.HandlerFunc) {
 			rw.Header().Set("m1", "m1")
 			if rw.Header().Get("m2") != "" {
@@ -110,7 +120,7 @@ func TestGroup(t *testing.T) {
 		next(rw, r)
 	})
 
-	v1 := router.Group("/v1", func() negroni.HandlerFunc {
+	v1 := router.Group("/v1", func() HandlerFunc {
 		return func(rw http.ResponseWriter, r *http.Request, next http.HandlerFunc) {
 			rw.Header().Set("v1", "v1")
 		}
@@ -202,7 +212,6 @@ func TestPanic(t *testing.T) {
 
 	router.UseFunc(func(rw http.ResponseWriter, r *http.Request, next http.HandlerFunc) {
 		panic("middleware 2 panic")
-		next(rw, r)
 	})
 
 	router.GET("/panic", func(rw http.ResponseWriter, r *http.Request, next http.HandlerFunc) {
