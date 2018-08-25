@@ -112,7 +112,7 @@ func (m *Micro) ServeGRPC(bindAddr string, rpcServer, srv interface{}, opts ...g
 			}
 
 			if method.Type.NumIn() != t.NumIn()-1 {
-				m.errChan <- fmt.Errorf("rpc method %q want:%s, have:%s", method.Name, method.Type, t)
+				m.errChan <- fmt.Errorf("rpc method %q want: %s, have: %s", method.Name, method.Type, t)
 				return
 			}
 
@@ -155,7 +155,7 @@ func (m *Micro) ServeGRPC(bindAddr string, rpcServer, srv interface{}, opts ...g
 			}
 
 			if failed {
-				m.errChan <- fmt.Errorf("rpc method %q want:%s, have:%s", method.Name, rpcBuff.String(), implBuff.String())
+				m.errChan <- fmt.Errorf("rpc method %q want: %s, have: %s", method.Name, rpcBuff.String(), implBuff.String())
 				return
 			}
 		}
@@ -165,6 +165,8 @@ func (m *Micro) ServeGRPC(bindAddr string, rpcServer, srv interface{}, opts ...g
 	}
 
 	reflect.ValueOf(rpcServer).Call(params)
+
+	log.Debugf("grpc version: %s", grpc.Version)
 
 	go func() {
 		err := server.Serve(ln)
