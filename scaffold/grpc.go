@@ -62,4 +62,4 @@ func Recovery(ctx context.Context, req interface{}, info *grpc.UnaryServerInfo, 
 	return handler(ctx, req)
 }
 
-var UnaryInterceptor = grpc.UnaryInterceptor(UnaryInterceptorChain(Recovery, WrapError))
+var GRPCServeOpts = grpc.UnaryInterceptor(UnaryInterceptorChain(Recovery, WrapError))
