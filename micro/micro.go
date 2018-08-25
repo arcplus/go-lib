@@ -42,14 +42,15 @@ func New() Micro {
 	return m
 }
 
-// FILO
+// Close close all added resource FILO
 func (m *micro) Close() {
 	m.mu.Lock()
-	for e := m.resCloseFuncs.Back(); e != nil; {
+	for m.resCloseFuncs.Len() != 0 {
+		e := m.resCloseFuncs.Back()
 		if f, ok := e.Value.(func() error); ok && f != nil {
 			err := f()
 			if err != nil {
-				log.Errorf("release res err: %s", err.Error())
+				log.Errorf("close resource err: %s", err.Error())
 			}
 		}
 		m.resCloseFuncs.Remove(e)
