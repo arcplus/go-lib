@@ -10,11 +10,20 @@ import (
 
 // HandlerFunc is http handler func
 type HandlerFunc = negroni.HandlerFunc
+type Params = httprouter.Params
 
 // Wrap http.HandlerFunc to HandlerFunc
 func Wrap(handler http.HandlerFunc) HandlerFunc {
 	return func(rw http.ResponseWriter, r *http.Request, next http.HandlerFunc) {
-		handler.ServeHTTP(rw, r)
+		handler(rw, r)
+		next(rw, r)
+	}
+}
+
+// WrapX httprouter to HandlerFunc
+func WrapX(handle httprouter.Handle) HandlerFunc {
+	return func(rw http.ResponseWriter, r *http.Request, next http.HandlerFunc) {
+		handle(rw, r, httprouter.ParamsFromContext(r.Context()))
 		next(rw, r)
 	}
 }
@@ -122,7 +131,7 @@ func (r *Router) ServeHTTP(rw http.ResponseWriter, req *http.Request) {
 }
 
 // GetParams get params from request or request.Context()
-func GetParams(r interface{}) httprouter.Params {
+func GetParams(r interface{}) Params {
 	switch v := r.(type) {
 	case *http.Request:
 		return httprouter.ParamsFromContext(v.Context())
