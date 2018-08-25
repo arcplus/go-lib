@@ -63,9 +63,9 @@ func Recovery(ctx context.Context, req interface{}, info *grpc.UnaryServerInfo, 
 }
 
 // GRPCServeOpts is helper  UnaryInterceptorChain with Recovery and WrapError
-var GRPCServeOpts = grpc.UnaryInterceptor(UnaryInterceptorChain(Recovery, WrapError))
+var GRPCServerOpts = grpc.UnaryInterceptor(UnaryInterceptorChain(Recovery, WrapError))
 
 // NewGRPCServer is helper func to create *grpc.Server
 func NewGRPCServer(opt ...grpc.ServerOption) *grpc.Server {
-	return grpc.NewServer(append(opt, GRPCServeOpts)...)
+	return grpc.NewServer(append(opt, GRPCServerOpts)...)
 }
