@@ -1,18 +1,35 @@
 package micro
 
 import (
+	"bytes"
 	"container/list"
 	"context"
+	"fmt"
 	"net"
 	"net/http"
 	"os"
 	"os/signal"
 	"sync"
 	"syscall"
+	"text/tabwriter"
 	"time"
 
 	"github.com/arcplus/go-lib/log"
 )
+
+// go build -ldflags -X
+var version, gitCommit, buildDate string
+
+// VersionInfo return visualized version info
+func VersionInfo() string {
+	buff := &bytes.Buffer{}
+	w := tabwriter.NewWriter(buff, 0, 0, 0, ' ', tabwriter.AlignRight)
+	fmt.Fprintln(w, "version: \t"+version)
+	fmt.Fprintln(w, "gitCommit: \t"+gitCommit)
+	fmt.Fprintln(w, "buildDate: \t"+buildDate) // trailing tab
+	w.Flush()
+	return buff.String()
+}
 
 type Micro interface {
 	AddResCloseFunc(f func() error)
