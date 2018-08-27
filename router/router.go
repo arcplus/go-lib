@@ -115,6 +115,20 @@ func (r *Router) Any(path string, handlers ...HandlerFunc) {
 	r.Handler(http.MethodTrace, path, handlers...)
 }
 
+// ServeFiles serves files from the given file system root.
+// The path must end with "/*filepath", files are then served from the local
+// path /defined/root/dir/*filepath.
+// For example if root is "/etc" and *filepath is "passwd", the local file
+// "/etc/passwd" would be served.
+// Internally a http.FileServer is used, therefore http.NotFound is used instead
+// of the Router's NotFound handler.
+// To use the operating system's file system implementation,
+// use http.Dir:
+//     router.ServeFiles("/src/*filepath", http.Dir("/var/www"))
+func (r *Router) ServeFiles(path string, root http.FileSystem) {
+	r.router.ServeFiles(path, root)
+}
+
 // NotFound for 404 handler
 func (r *Router) NotFound(handleFunc http.HandlerFunc) {
 	r.router.NotFound = handleFunc
