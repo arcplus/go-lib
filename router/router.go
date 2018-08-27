@@ -125,8 +125,19 @@ func (r *Router) Any(path string, handlers ...HandlerFunc) {
 // To use the operating system's file system implementation,
 // use http.Dir:
 //     router.ServeFiles("/src/*filepath", http.Dir("/var/www"))
-func (r *Router) ServeFiles(path string, root http.FileSystem) {
-	r.router.ServeFiles(path, root)
+func (r *Router) ServeFiles(path string, root http.FileSystem, handlers ...HandlerFunc) {
+	if len(path) < 10 || path[len(path)-10:] != "/*filepath" {
+		panic("path must end with /*filepath in path '" + path + "'")
+	}
+
+	fileServer := http.FileServer(root)
+
+	handlers = append(handlers, WrapX(func(rw http.ResponseWriter, req *http.Request, ps Params) {
+		req.URL.Path = ps.ByName("filepath")
+		fileServer.ServeHTTP(rw, req)
+	}))
+
+	r.GET(path, handlers...)
 }
 
 // NotFound for 404 handler
