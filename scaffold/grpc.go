@@ -35,9 +35,8 @@ func build(c grpc.UnaryServerInterceptor, n grpc.UnaryHandler, info *grpc.UnaryS
 func WrapError(ctx context.Context, req interface{}, info *grpc.UnaryServerInfo, handler grpc.UnaryHandler) (resp interface{}, err error) {
 	resp, err = handler(ctx, req)
 	if err != nil {
+		log.Errorf("method: %s\nerr: %s\nreq:%s", info.FullMethod, errs.StackTrace(err), tool.MarshalToString(req))
 		err = errs.ToGRPC(err)
-		// TODO req may be changed by handler.
-		log.Errorf("method:%s, err:%s, req:%s", info.FullMethod, err.Error(), tool.MarshalToString(req))
 	}
 	return resp, err
 }
