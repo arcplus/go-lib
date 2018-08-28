@@ -22,7 +22,7 @@ func init() {
 		// github.com/arcplus/go-lib/errs/path.go
 		size := len(file)
 		suffix := len("github.com/arcplus/go-lib/errs/path.go")
-		goPath = file[:size-suffix]
+		goPath = strings.TrimSuffix(file[:size-suffix], "vendor/") // remove vendor
 		prefixSize = len(goPath)
 	}
 }

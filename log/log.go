@@ -5,6 +5,7 @@ import (
 	"os"
 	"runtime"
 	"strconv"
+	"strings"
 	"sync"
 
 	"github.com/arcplus/go-lib/pool"
@@ -61,7 +62,7 @@ func init() {
 	if ok {
 		size := len(file)
 		suffix := len("github.com/arcplus/go-lib/log/log.go")
-		prefixSize = len(file[:size-suffix])
+		prefixSize = len(strings.TrimSuffix(file[:size-suffix], "vendor/")) // remove vendor
 	}
 }
 
