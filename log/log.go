@@ -178,6 +178,17 @@ func (l Log) KV(k string, v string) Log {
 	return l
 }
 
+func Trace(v string) Log {
+	l := logger
+	l.kv = append(l.kv, "tid", v)
+	return l
+}
+
+func (l Log) Trace(v string) Log {
+	l.kv = append(l.kv, "tid", v)
+	return l
+}
+
 func KVPair(kv map[string]string) Log {
 	l := logger
 	for k, v := range kv {

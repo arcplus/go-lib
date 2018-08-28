@@ -36,6 +36,12 @@ func TestKV(t *testing.T) {
 	}).KV("k3", "3").Debug("hello")
 }
 
+func TestTrace(t *testing.T) {
+	Trace("uuid-uuid-uuid-uuid").Info("trace test1")
+	Trace("uuid-uuid-uuid-uuid").Error("trace test2")
+	KV("x", "y").Trace("uuid-uuid-uuid-uuid").Error("trace test3")
+}
+
 var sLog = Sample(&BasicSampler{N: 2})
 
 func TestSample(t *testing.T) {
