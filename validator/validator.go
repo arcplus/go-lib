@@ -126,6 +126,11 @@ func valueWalker(rv reflect.Value, node string) (reflect.Value, error) {
 
 // abc_xyz to AbcXyz
 func underscoreToCamelCase(s string) string {
+	// is empty or start with UpperCase, do nothing
+	if len(s) == 0 || (s[0] >= 'A' && s[0] <= 'Z') {
+		return s
+	}
+
 	return strings.Replace(strings.Title(strings.Replace(strings.ToLower(s), "_", " ", -1)), " ", "", -1)
 }
 
