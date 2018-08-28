@@ -35,7 +35,7 @@ func build(c grpc.UnaryServerInterceptor, n grpc.UnaryHandler, info *grpc.UnaryS
 func WrapError(ctx context.Context, req interface{}, info *grpc.UnaryServerInfo, handler grpc.UnaryHandler) (resp interface{}, err error) {
 	resp, err = handler(ctx, req)
 	if err != nil {
-		log.Errorf("method: %s\nerr: %s\nreq:%s", info.FullMethod, errs.StackTrace(err), tool.MarshalToString(req))
+		log.Skip(1).Errorf("method: %s\nerr: %s\nreq:%s", info.FullMethod, errs.StackTrace(err), tool.MarshalToString(req))
 		err = errs.ToGRPC(err)
 	}
 	return resp, err
@@ -52,7 +52,7 @@ func Recovery(ctx context.Context, req interface{}, info *grpc.UnaryServerInfo, 
 		if r := recover(); r != nil {
 			stack := make([]byte, MAXSTACKSIZE)
 			stack = stack[:runtime.Stack(stack, false)]
-			log.Errorf("recover grpc invoke: %s, err=%v, stack:\n%s\n", info.FullMethod, r, string(stack))
+			log.Skip(1).Errorf("recover grpc invoke: %s\nerr: %v\nstack:\n%s", info.FullMethod, r, string(stack))
 			// if panic, set custom error to 'err', in order that client and sense it.
 			err = status.Errorf(codes.Internal, "panic error: %v", r)
 		}
