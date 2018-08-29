@@ -5,136 +5,54 @@ import (
 	"testing"
 )
 
-func TestStack(t *testing.T) {
-	e1 := Trace(errors.New("hello"))
+func TestIs(t *testing.T) {
+	e1 := errors.New("e1")
+	if !Is(e1, e1) {
+		t.Fatal("e1 should equal e1")
+	}
+	e2 := Wrap(e1, 302)
+	if !Is(e2, e1) {
+		t.Fatal("e2 should equal e1")
+	}
+	e3 := Wrap(e2, 404)
+	if !Is(e3, e1) {
+		t.Fatal("e3 should equal e1")
+	}
+	if !Is(e3, e2) {
+		t.Fatal("e3 should equal e2")
+	}
+}
+
+func TestIsCode(t *testing.T) {
+	if IsCode(errGo, ErrInternal) {
+		t.Fatalf("%v should not code %d", errGo, ErrInternal)
+	}
+	if !IsCode(errNew, errCodeTest) {
+		t.Fatalf("%v should not code %d", errNew, errCodeTest)
+	}
+	e1 := Wrap(errNew, 302)
+	if !IsCode(e1, 302) {
+		t.Fatalf("%v should not code %d", e1, 302)
+	}
+	e2 := Wrap(e1, 404)
+	if !IsCode(e2, 302) {
+		t.Fatalf("%v should not code %d", e2, 302)
+	}
+	if !IsCode(e2, 404) {
+		t.Fatalf("%v should not code %d", e2, 404)
+	}
+}
+
+func TestToError(t *testing.T) {
+
+	//t.Log(ToError(e1.Err()))
+}
+
+func TestStackTrace(t *testing.T) {
+	t.Logf("\n%s", StackTrace(errGo))
+	t.Logf("\n%s", StackTrace(errNew))
+	e1 := Trace(errGo)
+	t.Logf("\n%s", StackTrace(e1))
 	e2 := Trace(e1)
-
-	e3 := Wrap(e2, 200, "ok")
-	e4 := Trace(e3)
-	t.Log(StackTrace(e4))
-}
-
-func TestEqual(t *testing.T) {
-	e1 := errors.New("hello")
-	e2 := Trace(errors.New("hello"))
-
-	t.Log(Equal(e1, e2))
-
-	type args struct {
-		e1 error
-		e2 error
-	}
-	tests := []struct {
-		name string
-		args args
-		want bool
-	}{
-		{
-			name: "nil test",
-			args: args{e1: nil, e2: nil},
-			want: true,
-		},
-		{
-			name: "not equal test",
-			args: args{e1: nil, e2: errors.New("test")},
-			want: false,
-		},
-		{
-			name: "not equal test",
-			args: args{e1: errors.New("hello"), e2: errors.New("world")},
-			want: false,
-		},
-		{
-			name: "equal test",
-			args: args{e1: errors.New("hello"), e2: errors.New("hello")},
-			want: true,
-		},
-		{
-			name: "equal test",
-			args: args{e1: Trace(errors.New("hello")), e2: Trace(errors.New("hello"))},
-			want: true,
-		},
-		{
-			name: "equal test",
-			args: args{e1: errors.New("hello"), e2: Trace(errors.New("hello"))},
-			want: true,
-		},
-		{
-			name: "equal test",
-			args: args{e1: &Error{}, e2: &Error{}},
-			want: true,
-		},
-		{
-			name: "equal test",
-			args: args{e1: &Error{code: 123, message: "hello"}, e2: &Error{code: 123, message: "world"}},
-			want: true,
-		},
-		{
-			name: "not equal test",
-			args: args{e1: &Error{code: 123, message: "hello"}, e2: &Error{code: 456, message: "hello"}},
-			want: false,
-		},
-		{
-			name: "not equal test",
-			args: args{e1: &Error{code: 0, message: "hello"}, e2: &Error{code: 0, message: "world"}},
-			want: false,
-		},
-		{
-			name: "equal test",
-			args: args{e1: &Error{code: 0, message: "hello"}, e2: &Error{code: 0, message: "hello"}},
-			want: true,
-		},
-		{
-			name: "equal test",
-			args: args{e1: New(0, "hello world"), e2: New(0, "hello %s", "world")},
-			want: true,
-		},
-	}
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			if got := Equal(tt.args.e1, tt.args.e2); got != tt.want {
-				t.Errorf("Equal() = %v, want %v", got, tt.want)
-			}
-		})
-	}
-}
-
-func TestCodeEqual(t *testing.T) {
-	err := New(404, "not found")
-	if !CodeEqual(404, err) {
-		t.Fatal("should equal")
-	}
-}
-
-func TestToGRPC(t *testing.T) {
-	err := New(404, "not found")
-	t.Log(ToGRPC(err))
-}
-
-func TestUnWrap(t *testing.T) {
-	var err error = New(404, "not found")
-	if UnWrap(err).Code() != 404 {
-		t.Fatal("code should equal")
-	}
-
-	err = ToGRPC(err)
-	if UnWrap(err).Code() != 404 {
-		t.Fatal("code should equal")
-	}
-}
-
-func TestAnnotate(t *testing.T) {
-	err1 := errors.New("hello")
-	err1 = Annotate(err1, "world")
-	t.Log(err1)
-	t.Log(StackTrace(err1))
-	err1 = Wrap(err1, 302, "not modify")
-	err1 = Annotate(err1, "world")
-	t.Log(err1)
-	t.Log(StackTrace(err1))
-	func() {
-		defer DeferredAnnotate(&err1, "hello")
-		t.Log(StackTrace(err1))
-	}()
-	t.Log(StackTrace(err1))
+	t.Logf("\n%s", StackTrace(e2))
 }

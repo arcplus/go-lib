@@ -4,21 +4,22 @@ import (
 	"encoding/json"
 	"fmt"
 	"runtime"
-
-	"google.golang.org/grpc/codes"
-	"google.golang.org/grpc/status"
 )
 
-// A Code is an unsigned 32-bit error code
 type ErrCode uint32
 
-const ErrUnknown ErrCode = 2
+const (
+	ErrOK         ErrCode = 0
+	ErrInternal   ErrCode = 1000
+	ErrBadRequest ErrCode = 1001
+	ErrUnAuth     ErrCode = 1002
+)
 
 // Error implements error interface and add Code, so
 // errors with different message can be compared.
 type Error struct {
-	code    ErrCode // cause
-	message string
+	code ErrCode // cause
+	msg  string
 
 	args []interface{}
 
@@ -31,10 +32,74 @@ type Error struct {
 	line int
 }
 
-func new(code ErrCode, message string, args []interface{}, prev error, skip int) *Error {
-	err := &Error{code: code, message: message, args: args, prev: prev}
+// new returns Error
+func new(code ErrCode, msg string, args []interface{}, prev error, skip int) *Error {
+	err := Error{
+		code: code,
+		msg:  msg,
+		args: args,
+		prev: prev,
+	}
 	_, err.file, err.line, _ = runtime.Caller(skip + 1)
-	return err
+	return &err
+}
+
+func (e Error) Code() ErrCode {
+	return e.code
+}
+
+// Message returns formatted message
+func (e Error) Message() string {
+	if len(e.args) > 0 {
+		return fmt.Sprintf(e.msg, e.args...)
+	}
+	return e.msg
+}
+
+var _ error = Error{}
+
+// Error implements error interface.
+func (e Error) Error() string {
+	return fmt.Sprintf("[%d]%s", e.Code(), e.Message())
+}
+
+// Unwrap returns the next error in the error chain.
+// If there is no next error, Unwrap returns nil.
+func (e Error) Unwrap() error {
+	return e.prev
+}
+
+// Location returns the location where the error is created,
+// implements juju/errors locationer interface.
+func (e Error) Location() (file string, line int) {
+	return e.file, e.line
+}
+
+// MarshalJSON implements json.Marshaler interface.
+func (e Error) MarshalJSON() ([]byte, error) {
+	return json.Marshal(struct {
+		Code ErrCode `json:"code"`
+		Msg  string  `json:"message"`
+	}{
+		Code: e.Code(),
+		Msg:  e.Message(),
+	})
+}
+
+// UnmarshalJSON implements json.Unmarshaler interface.
+func (e *Error) UnmarshalJSON(data []byte) error {
+	info := &struct {
+		Code ErrCode `json:"code"`
+		Msg  string  `json:"message"`
+	}{}
+
+	if err := json.Unmarshal(data, &info); err != nil {
+		return Trace(err)
+	}
+
+	e.code = info.Code
+	e.msg = info.Msg
+	return nil
 }
 
 // New is a drop in replacement for the standard library errors module that records
@@ -43,52 +108,68 @@ func new(code ErrCode, message string, args []interface{}, prev error, skip int)
 // For example:
 //    return errs.New(401, "missing id")
 //
-func New(code ErrCode, message string, args ...interface{}) *Error {
-	return new(code, message, args, nil, 1)
+func New(code ErrCode, msg string, args ...interface{}) error {
+	if code == ErrOK {
+		return nil
+	}
+
+	return new(code, msg, args, nil, 1)
 }
 
 // Wrap changes the code of the error. The location of the Wrap call is also
 // stored in the error stack.
 //
 // For example:
-//  err:=someFunc()
-//  if err!=nil{
-//    return errs.Wrap(err, 500, "internal err")
-// }
-func Wrap(err error, code ErrCode, message string, args ...interface{}) error {
-	if err == nil {
+//    err:=someFunc()
+//    if err!=nil {
+//        return errs.Wrap(err, 500, "internal err")
+//    }
+func Wrap(err error, code ErrCode, v ...interface{}) error {
+	if err == nil || code == ErrOK {
 		return nil
 	}
 
-	// add trace info
-	if _, ok := err.(*Error); !ok {
-		err = new(ErrUnknown, err.Error(), nil, nil, 1)
+	var msg string
+	var args []interface{}
+	if len(v) == 0 {
+		if e, ok := err.(*Error); ok {
+			msg = e.Message()
+		} else {
+			msg = err.Error()
+		}
+	} else {
+		if v0, ok := v[0].(string); ok {
+			msg = v0
+		} else {
+			msg = fmt.Sprint(v[0])
+		}
+		args = v[1:]
 	}
 
-	return new(code, message, args, err, 1)
+	return new(code, msg, args, err, 1)
 }
 
-// Trace add file and line info to err
+// Trace add file and line info to err.
 //
 // For example:
-// err:=someFunc()
-// if err!=nil {
-//	return errs.Trace(err)
-// }
+//   err:=someFunc()
+//   if err!=nil {
+//	   return errs.Trace(err)
+//   }
 func Trace(err error) error {
 	if err == nil {
 		return nil
 	}
 
-	newErr := new(ErrUnknown, "", nil, nil, 1)
+	newErr := new(ErrInternal, "", nil, nil, 1)
 
 	v, ok := err.(*Error)
-	if !ok {
-		newErr.message = err.Error()
-	} else {
+	if ok {
 		newErr.code = v.Code()
-		newErr.message = v.Message()
+		newErr.msg = v.Message()
 		newErr.prev = err
+	} else {
+		newErr.msg = err.Error()
 	}
 
 	return newErr
@@ -103,12 +184,13 @@ func Trace(err error) error {
 //       return errs.Annotate(err, "failed to frombulate")
 //   }
 //
-func Annotate(err error, message string, args ...interface{}) error {
+func Annotate(err error, msg string, args ...interface{}) error {
 	if err == nil {
 		return nil
 	}
 
-	newErr := new(ErrUnknown, message, args, err, 1)
+	newErr := new(ErrInternal, msg, args, err, 1)
+	newErr.prev = err
 
 	if v, ok := err.(*Error); ok {
 		newErr.code = v.Code()
@@ -126,12 +208,13 @@ func Annotate(err error, message string, args ...interface{}) error {
 //
 //    defer DeferredAnnotate(&err, "failed to frombulate the %s", arg)
 //
-func DeferredAnnotate(err *error, message string, args ...interface{}) {
+func DeferredAnnotate(err *error, msg string, args ...interface{}) {
 	if *err == nil {
 		return
 	}
 
-	newErr := new(ErrUnknown, message, args, *err, 1)
+	newErr := new(ErrInternal, msg, args, *err, 1)
+	newErr.prev = *err
 
 	if v, ok := (*err).(*Error); ok {
 		newErr.code = v.Code()
@@ -140,121 +223,46 @@ func DeferredAnnotate(err *error, message string, args ...interface{}) {
 	*err = newErr
 }
 
-// Code returns ErrCode
-func (e *Error) Code() ErrCode {
-	return e.code
-}
-
-// Message returns formatted message
-func (e *Error) Message() string {
-	if len(e.args) > 0 {
-		return fmt.Sprintf(e.message, e.args...)
-	}
-	return e.message
-}
-
-// Underlying returns the Previous error, or nil
-// if there is none.
-func (e *Error) Underlying() error {
-	return e.prev
-}
-
-// Location returns the location where the error is created,
-// implements juju/errors locationer interface.
-func (e *Error) Location() (file string, line int) {
-	return e.file, e.line
-}
-
-// Error implements error interface.
-func (e *Error) Error() string {
-	msg := e.Message()
-	if e.code == ErrUnknown {
-		if msg != "" {
-			return msg
-		}
-		if e.prev != nil {
-			return e.prev.Error()
-		}
-	}
-	return fmt.Sprintf("[%d]%s", e.code, msg)
-}
-
-// MarshalJSON implements json.Marshaler interface.
-func (e *Error) MarshalJSON() ([]byte, error) {
-	return json.Marshal(&struct {
-		Code ErrCode `json:"code"`
-		Msg  string  `json:"message"`
-	}{
-		Code: e.code,
-		Msg:  e.Message(),
-	})
-}
-
-// UnmarshalJSON implements json.Unmarshaler interface.
-func (e *Error) UnmarshalJSON(data []byte) error {
-	err := &struct {
-		Code ErrCode `json:"code"`
-		Msg  string  `json:"message"`
-	}{}
-
-	if err := json.Unmarshal(data, &err); err != nil {
-		return Trace(err)
-	}
-
-	e.code = err.Code
-	e.message = err.Msg
-	return nil
-}
-
-// Equal checks if err is equal to e.
-func (e *Error) Equal(err error) bool {
-	originErr := Cause(err)
-	if originErr == nil {
-		return false
-	}
-
-	if error(e) == originErr {
-		return true
-	}
-	inErr, ok := originErr.(*Error)
-	return ok && e.code == inErr.code
-}
-
-// ToGRPC convert *Error to gRPC error
-func (e *Error) ToGRPC() error {
-	return status.Error(codes.Code(e.code), e.Message())
-}
-
 // Internal for some internal error
 func Internal(err error) error {
 	if err == nil {
 		return nil
 	}
-	return new(1000, err.Error(), nil, nil, 1)
-}
-
-// SQL error
-func SQL(err error) error {
-	if err == nil {
-		return nil
-	}
-	return new(1001, err.Error(), nil, nil, 1)
-}
-
-// RDS error
-func RDS(err error) error {
-	if err == nil {
-		return nil
-	}
-	return new(1002, err.Error(), nil, nil, 1)
+	return new(ErrInternal, err.Error(), nil, nil, 1)
 }
 
 // BadRequest error
-func BadRequest(message string, args ...interface{}) error {
-	return new(1003, message, args, nil, 1)
+func BadRequest(msg interface{}, args ...interface{}) error {
+	var msgStr string
+	switch v := msg.(type) {
+	case string:
+		msgStr = v
+	case error:
+		if e, ok := v.(Error); ok {
+			return new(ErrBadRequest, e.Message(), nil, e, 1)
+		}
+		return new(ErrBadRequest, v.Error(), nil, v, 1)
+	default:
+		msgStr = fmt.Sprint(msg)
+	}
+
+	return new(ErrBadRequest, msgStr, args, nil, 1)
 }
 
 // UnAuthorized error
-func UnAuthorized(message string, args ...interface{}) error {
-	return new(1004, message, args, nil, 1)
+func UnAuthorized(msg interface{}, args ...interface{}) error {
+	var msgStr string
+	switch v := msg.(type) {
+	case string:
+		msgStr = v
+	case error:
+		if e, ok := v.(Error); ok {
+			return new(ErrUnAuth, e.Message(), nil, e, 1)
+		}
+		return new(ErrUnAuth, v.Error(), nil, v, 1)
+	default:
+		msgStr = fmt.Sprint(msg)
+	}
+
+	return new(ErrUnAuth, msgStr, args, nil, 1)
 }
