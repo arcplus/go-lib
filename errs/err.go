@@ -56,10 +56,10 @@ func (e Error) Message() string {
 	return e.msg
 }
 
-var _ error = Error{}
+var _ error = &Error{}
 
 // Error implements error interface.
-func (e Error) Error() string {
+func (e *Error) Error() string {
 	return fmt.Sprintf("[%d]%s", e.Code(), e.Message())
 }
 
@@ -238,7 +238,7 @@ func BadRequest(msg interface{}, args ...interface{}) error {
 	case string:
 		msgStr = v
 	case error:
-		if e, ok := v.(Error); ok {
+		if e, ok := v.(*Error); ok {
 			return new(ErrBadRequest, e.Message(), nil, e, 1)
 		}
 		return new(ErrBadRequest, v.Error(), nil, v, 1)
@@ -256,7 +256,7 @@ func UnAuthorized(msg interface{}, args ...interface{}) error {
 	case string:
 		msgStr = v
 	case error:
-		if e, ok := v.(Error); ok {
+		if e, ok := v.(*Error); ok {
 			return new(ErrUnAuth, e.Message(), nil, e, 1)
 		}
 		return new(ErrUnAuth, v.Error(), nil, v, 1)

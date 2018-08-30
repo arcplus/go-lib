@@ -15,6 +15,7 @@ type wrapper interface {
 	Unwrap() error
 }
 
+// Is reports whether err or any of the errors in its chain is equal to target.
 func Is(err, target error) bool {
 	for {
 		if err == target {
