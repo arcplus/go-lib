@@ -177,8 +177,8 @@ func (m *micro) Start() {
 	signal.Notify(ch, WatchSignal...)
 	select {
 	case s := <-ch:
-		log.Infof("receive stop signal: %s", s)
+		log.Skip(1).Infof("receive stop signal: %s", s)
 	case e := <-m.errChan:
-		log.Errorf("receive err signal: %s", e)
+		log.Skip(1).Errorf("receive err signal: %s", e)
 	}
 }
