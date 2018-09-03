@@ -34,6 +34,7 @@ const (
 type Log struct {
 	depth   int
 	stack   bool
+	mu      *sync.RWMutex
 	kv      []string
 	logger  *zerolog.Logger
 	sampler zerolog.Sampler
@@ -43,6 +44,7 @@ var zl = zerolog.New(zerolog.ConsoleWriter{Out: os.Stdout}).With().Timestamp().L
 
 var logger = Log{
 	logger: &zl,
+	mu:     &sync.RWMutex{},
 	kv:     make([]string, 0, 8),
 }
 
@@ -64,6 +66,12 @@ func init() {
 		suffix := len("github.com/arcplus/go-lib/log/log.go")
 		prefixSize = len(strings.TrimSuffix(file[:size-suffix], "vendor/")) // remove vendor
 	}
+}
+
+// Logger return log
+func Logger() Log {
+	l := logger
+	return l
 }
 
 // SetOutput set multi log writer, careful, all SetXXX method are non-thread safe.
@@ -177,6 +185,14 @@ func KV(k string, v string) Log {
 func (l Log) KV(k string, v string) Log {
 	l.kv = append(l.kv, k, v)
 	return l
+}
+
+// SetKV change kv slice
+func (l *Log) SetKV(k string, v string) Log {
+	l.mu.Lock()
+	l.kv = append(l.kv, k, v)
+	l.mu.Unlock()
+	return *l
 }
 
 func Trace(v string) Log {
