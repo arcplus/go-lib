@@ -45,7 +45,6 @@ var zl = zerolog.New(zerolog.ConsoleWriter{Out: os.Stdout}).With().Timestamp().L
 var logger = Log{
 	zl: &zl,
 	mu: &sync.RWMutex{},
-	kv: make([]string, 0, 8),
 }
 
 // prefixSize is used internally to trim the user specific path from the
@@ -71,6 +70,7 @@ func init() {
 // Logger return copy of default logger
 func Logger() Log {
 	l := logger
+	l.kv = make([]string, 0, 8)
 	return l
 }
 
