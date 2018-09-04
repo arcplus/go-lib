@@ -37,20 +37,23 @@ func TestKV(t *testing.T) {
 		"p2": "2",
 	}).KV("k3", "3").Debug("hello")
 
-	logger := Logger()
+	logger1 := Logger()
+	logger2 := Logger()
 	wg := sync.WaitGroup{}
 	for i := 0; i < 100; i++ {
 		wg.Add(1)
-		func(x int) {
+		go func(x int) {
 			defer wg.Done()
 			seq := fmt.Sprint(x)
-			logger.SetKV("k"+seq, "v"+seq)
+			logger1.SetKV("k"+seq, "v"+seq)
 		}(i)
 	}
 	wg.Wait()
-	logger.KV("name", "bob").Debug("hi")
+	logger1.KV("name", "bob").Debug("hi")
 
 	KV("k1", "v1").KV("k2", "v2").Debug("hello")
+
+	logger2.Debug("xman")
 }
 
 func TestTrace(t *testing.T) {

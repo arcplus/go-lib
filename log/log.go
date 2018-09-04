@@ -36,16 +36,16 @@ type Log struct {
 	stack   bool
 	mu      *sync.RWMutex
 	kv      []string
-	logger  *zerolog.Logger
+	zl      *zerolog.Logger
 	sampler zerolog.Sampler
 }
 
 var zl = zerolog.New(zerolog.ConsoleWriter{Out: os.Stdout}).With().Timestamp().Logger()
 
 var logger = Log{
-	logger: &zl,
-	mu:     &sync.RWMutex{},
-	kv:     make([]string, 0, 8),
+	zl: &zl,
+	mu: &sync.RWMutex{},
+	kv: make([]string, 0, 8),
 }
 
 // prefixSize is used internally to trim the user specific path from the
@@ -68,7 +68,7 @@ func init() {
 	}
 }
 
-// Logger return log
+// Logger return copy of default logger
 func Logger() Log {
 	l := logger
 	return l
@@ -292,10 +292,10 @@ func (l Log) Fatalf(format string, v ...interface{}) {
 }
 
 func (l Log) levelLog(lv Level, format string, v ...interface{}) {
-	evt := l.logger.WithLevel(lv)
+	evt := l.zl.WithLevel(lv)
 
 	if l.sampler != nil {
-		s := l.logger.Sample(l.sampler)
+		s := l.zl.Sample(l.sampler)
 		evt = s.WithLevel(lv)
 	}
 
