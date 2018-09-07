@@ -46,7 +46,8 @@ type micro struct {
 	resCloseFuncs *list.List
 }
 
-func New() Micro {
+// New create Micro, moduleName.0 is module name.
+func New(moduleName ...string) Micro {
 	m := &micro{
 		mu:            &sync.Mutex{},
 		errChan:       make(chan error, 1),
@@ -54,9 +55,33 @@ func New() Micro {
 		resCloseFuncs: list.New(),
 	}
 
+	if len(moduleName) != 0 {
+		log.SetAttachment(map[string]string{
+			"module": moduleName[0],
+		})
+	}
+
+	if rds, key := os.Getenv("log_rds"), os.Getenv("log_key"); rds != "" && key != "" {
+		level := log.InfoLevel
+		if os.Getenv("log_level") == "debug" {
+			level = log.DebugLevel
+		}
+
+		log.SetOutput(log.RedisWriter(log.RedisConfig{
+			Level:  level,
+			DSN:    rds,
+			LogKey: key,
+			Async:  true,
+		}))
+	}
+
 	m.AddResCloseFunc(log.Close)
 
 	return m
+}
+
+func SetLogger(rdsDSN string, moduleName string, mode string) {
+
 }
 
 // Close close all added resource FILO
