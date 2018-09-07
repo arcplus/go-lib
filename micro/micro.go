@@ -9,6 +9,7 @@ import (
 	"net/http"
 	"os"
 	"os/signal"
+	"strconv"
 	"sync"
 	"syscall"
 	"text/tabwriter"
@@ -206,4 +207,28 @@ func (m *micro) Start() {
 	case e := <-m.errChan:
 		log.Skip(1).Errorf("receive err signal: %s", e)
 	}
+}
+
+// bind is a helper func to read env port and returns bind addr
+func Bind(port string, envName ...string) string {
+	env := "p"
+	if len(envName) != 0 {
+		env = envName[0]
+	}
+
+	if p := os.Getenv(env); p != "" {
+		port = p
+	}
+
+	// :port, it panics if port is empty
+	if port[0] == ':' {
+		return port
+	}
+
+	// port only, yes, it may return :0, caution
+	if _, err := strconv.Atoi(port); err == nil {
+		return ":" + port
+	}
+
+	return port
 }
