@@ -62,6 +62,17 @@ func New(moduleName ...string) Micro {
 		})
 	}
 
+	if mode := os.Getenv("mode"); mode != "" {
+		log.SetAttachment(map[string]string{
+			"mode": mode,
+		})
+	}
+
+	// set if show line num
+	if logNum := os.Getenv("log_num"); logNum == "true" {
+		log.SetShowLineNum()
+	}
+
 	if rds, key := os.Getenv("log_rds"), os.Getenv("log_key"); rds != "" && key != "" {
 		level := log.InfoLevel
 		if os.Getenv("log_level") == "debug" {
