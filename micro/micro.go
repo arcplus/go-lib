@@ -47,6 +47,19 @@ type micro struct {
 	resCloseFuncs *list.List
 }
 
+var mode = os.Getenv("mode")
+
+func ProdMode() bool {
+	return mode == "prod" || mode == "production"
+}
+
+func Mode() string {
+	if mode == "" {
+		return "dev"
+	}
+	return mode
+}
+
 // New create Micro, moduleName.0 is module name.
 func New(moduleName ...string) Micro {
 	m := &micro{
@@ -62,7 +75,7 @@ func New(moduleName ...string) Micro {
 		})
 	}
 
-	if mode := os.Getenv("mode"); mode != "" {
+	if mode != "" {
 		log.SetAttachment(map[string]string{
 			"mode": mode,
 		})
@@ -85,10 +98,6 @@ func New(moduleName ...string) Micro {
 	m.AddResCloseFunc(log.Close)
 
 	return m
-}
-
-func SetLogger(rdsDSN string, moduleName string, mode string) {
-
 }
 
 // Close close all added resource FILO
