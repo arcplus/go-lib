@@ -9,10 +9,6 @@ import (
 	"github.com/rs/zerolog/log"
 )
 
-func TestSetShowLineNum(t *testing.T) {
-	SetShowLineNum()
-}
-
 func TestSetAttachment(t *testing.T) {
 	SetAttachment(map[string]string{"a1": "1", "a2": "2"})
 	Debug("hello")
@@ -37,23 +33,45 @@ func TestKV(t *testing.T) {
 		"p2": "2",
 	}).KV("k3", "3").Debug("hello")
 
-	logger1 := Logger()
-	logger2 := Logger()
+	l1 := Logger()
+	l1.SetKV("a1", "b1")
+	l1.Debug("l1")
+	Debug("x")
+
 	wg := sync.WaitGroup{}
-	for i := 0; i < 100; i++ {
-		wg.Add(1)
-		go func(x int) {
-			defer wg.Done()
-			seq := fmt.Sprint(x)
-			logger1.SetKV("k"+seq, "v"+seq)
-		}(i)
-	}
+	go func() {
+		logger1 := Logger()
+		for i := 0; i < 100; i++ {
+			wg.Add(1)
+			go func(x int) {
+				defer wg.Done()
+				seq := fmt.Sprint(x)
+				logger1.SetKV("k"+seq, "v"+seq)
+			}(i)
+		}
+		wg.Wait()
+		logger1.SetKV("k", "v").Debug("logger1")
+	}()
+
+	go func() {
+		logger2 := Logger()
+		for i := 0; i < 100; i++ {
+			wg.Add(1)
+			go func(x int) {
+				defer wg.Done()
+				seq := fmt.Sprint(x)
+				logger2.SetKV("a"+seq, "b"+seq)
+			}(i)
+		}
+		wg.Wait()
+		logger2.SetKV("a", "b").Debug("logger2")
+	}()
+
 	wg.Wait()
-	logger1.KV("name", "bob").Debug("hi")
 
 	KV("k1", "v1").KV("k2", "v2").Debug("hello")
 
-	logger2.Debug("xman")
+	<-time.After(time.Second)
 }
 
 func TestTrace(t *testing.T) {

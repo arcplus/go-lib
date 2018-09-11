@@ -32,12 +32,13 @@ const (
 
 // Log struct.
 type Log struct {
-	depth   int
-	stack   bool
-	mu      *sync.RWMutex
-	kv      []string
-	zl      *zerolog.Logger
-	sampler zerolog.Sampler
+	depth         int
+	lineNumEnable bool
+	stackEnable   bool
+	mu            *sync.RWMutex
+	kv            []string
+	zl            *zerolog.Logger
+	sampler       zerolog.Sampler
 }
 
 var zl = zerolog.New(zerolog.ConsoleWriter{Out: os.Stdout}).With().Timestamp().Logger()
@@ -89,12 +90,6 @@ func SetOutput(w ...io.Writer) {
 // SetLevel set global log max level.
 func SetLevel(l Level) {
 	zerolog.SetGlobalLevel(l)
-}
-
-var showLineNum bool
-
-func SetShowLineNum() {
-	showLineNum = true
 }
 
 var depth = 2
@@ -216,12 +211,23 @@ func KVPair(kv map[string]string) Log {
 
 func WithStack() Log {
 	l := logger
-	l.stack = true
+	l.stackEnable = true
 	return l
 }
 
 func (l Log) WithStack() Log {
-	l.stack = true
+	l.stackEnable = true
+	return l
+}
+
+func WithLineNum() Log {
+	l := logger
+	l.lineNumEnable = true
+	return l
+}
+
+func (l Log) WithLineNum() Log {
+	l.lineNumEnable = true
 	return l
 }
 
@@ -305,17 +311,17 @@ func (l Log) levelLog(lv Level, format string, v ...interface{}) {
 		}
 	}
 
-	if showLineNum {
-		_, file, line, _ := runtime.Caller(l.depth + depth)
+	if l.lineNumEnable {
+		_, file, line, _ := runtime.Caller(depth + l.depth)
 		if prefixSize != 0 && len(file) > prefixSize {
 			file = file[prefixSize:]
 		}
-		file += strconv.FormatInt(int64(line), 10)
+		file += ":" + strconv.FormatInt(int64(line), 10)
 		evt.Str("ln", file)
 	}
 
-	if l.stack {
-		evt.Str("stack", TakeStacktrace(l.depth))
+	if l.stackEnable {
+		evt.Str("stack", TakeStacktrace(depth+l.depth))
 	}
 
 	evt.Msgf(format, v...)
