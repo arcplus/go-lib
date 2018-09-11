@@ -68,11 +68,6 @@ func New(moduleName ...string) Micro {
 		})
 	}
 
-	// set if show line num
-	if logNum := os.Getenv("log_num"); logNum == "true" {
-		log.SetShowLineNum()
-	}
-
 	if rds, key := os.Getenv("log_rds"), os.Getenv("log_key"); rds != "" && key != "" {
 		level := log.InfoLevel
 		if os.Getenv("log_level") == "debug" {
