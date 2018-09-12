@@ -14,6 +14,7 @@ const (
 	ErrBadRequest ErrCode = 1400
 	ErrUnAuth     ErrCode = 1401 // miss token
 	ErrForbidden  ErrCode = 1403
+	ErrNotFound   ErrCode = 1404
 	ErrConflict   ErrCode = 1409 // conflict error
 )
 
