@@ -21,8 +21,9 @@ const (
 // Error implements error interface and add Code, so
 // errors with different message can be compared.
 type Error struct {
-	code ErrCode // cause
-	msg  string
+	code    ErrCode // cause
+	message string  // message info
+	hint    string  // hint info
 
 	args []interface{}
 
@@ -38,10 +39,10 @@ type Error struct {
 // new returns Error
 func new(code ErrCode, msg string, args []interface{}, prev error, skip int) *Error {
 	err := Error{
-		code: code,
-		msg:  msg,
-		args: args,
-		prev: prev,
+		code:    code,
+		message: msg,
+		args:    args,
+		prev:    prev,
 	}
 	_, err.file, err.line, _ = runtime.Caller(skip + 1)
 	return &err
@@ -54,9 +55,9 @@ func (e Error) Code() ErrCode {
 // Message returns formatted message
 func (e Error) Message() string {
 	if len(e.args) > 0 {
-		return fmt.Sprintf(e.msg, e.args...)
+		return fmt.Sprintf(e.message, e.args...)
 	}
-	return e.msg
+	return e.message
 }
 
 var _ error = &Error{}
@@ -80,28 +81,30 @@ func (e Error) Location() (file string, line int) {
 
 // MarshalJSON implements json.Marshaler interface.
 func (e Error) MarshalJSON() ([]byte, error) {
-	return json.Marshal(struct {
-		Code ErrCode `json:"code"`
-		Msg  string  `json:"message"`
-	}{
-		Code: e.Code(),
-		Msg:  e.Message(),
+	return json.Marshal(errJSON{
+		Code:    e.Code(),
+		Message: e.Message(),
+		Hint:    e.hint,
 	})
+}
+
+type errJSON struct {
+	Code    ErrCode `json:"code"`
+	Message string  `json:"message"`
+	Hint    string  `json:"hint"`
 }
 
 // UnmarshalJSON implements json.Unmarshaler interface.
 func (e *Error) UnmarshalJSON(data []byte) error {
-	info := &struct {
-		Code ErrCode `json:"code"`
-		Msg  string  `json:"message"`
-	}{}
+	info := &errJSON{}
 
 	if err := json.Unmarshal(data, &info); err != nil {
 		return Trace(err)
 	}
 
 	e.code = info.Code
-	e.msg = info.Msg
+	e.message = info.Message
+	e.hint = info.Hint
 	return nil
 }
 
@@ -117,6 +120,23 @@ func New(code ErrCode, msg string, args ...interface{}) error {
 	}
 
 	return new(code, msg, args, nil, 1)
+}
+
+// NewWithHint is a drop in replacement for the standard library errors module that records
+// the location that the error is created but with hint msg for show.
+//
+// For example:
+//    return errs.New(404, "用户不存在", "user not found")
+//
+func NewWithHint(code ErrCode, hint string, msgf string, args ...interface{}) error {
+	if code == ErrOK {
+		return nil
+	}
+
+	e := new(code, msgf, args, nil, 1)
+	e.hint = hint
+
+	return e
 }
 
 // Wrap changes the code of the error. The location of the Wrap call is also
@@ -169,10 +189,10 @@ func Trace(err error) error {
 	v, ok := err.(*Error)
 	if ok {
 		newErr.code = v.Code()
-		newErr.msg = v.Message()
+		newErr.message = v.Message()
 		newErr.prev = err
 	} else {
-		newErr.msg = err.Error()
+		newErr.message = err.Error()
 	}
 
 	return newErr
