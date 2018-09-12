@@ -11,8 +11,10 @@ type ErrCode uint32
 const (
 	ErrOK         ErrCode = 0
 	ErrInternal   ErrCode = 1000
-	ErrBadRequest ErrCode = 1001
-	ErrUnAuth     ErrCode = 1002
+	ErrBadRequest ErrCode = 1400
+	ErrUnAuth     ErrCode = 1401 // miss token
+	ErrForbidden  ErrCode = 1403
+	ErrConflict   ErrCode = 1409 // conflict error
 )
 
 // Error implements error interface and add Code, so
