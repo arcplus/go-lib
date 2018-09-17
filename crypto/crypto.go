@@ -6,25 +6,28 @@ import (
 	"crypto/sha256"
 	"crypto/subtle"
 	"encoding/hex"
-	"fmt"
 	"hash/crc32"
 	"hash/crc64"
 
 	"golang.org/x/crypto/pbkdf2"
 )
 
-// Sha1Str returns sha1 string
-func Sha1Str(str string) string {
-	h := sha1.New()
-	h.Write([]byte(str))
-	return hex.EncodeToString(h.Sum(nil))
+// SHA1Sum
+func SHA1Sum(str string) string {
+	buf := sha1.Sum([]byte(str))
+	return hex.EncodeToString(buf[:])
 }
 
-// Md5Str returns md5 str
+// SHA256Sum
+func SHA256Sum(str string) string {
+	buf := sha256.Sum256([]byte(str))
+	return hex.EncodeToString(buf[:])
+}
+
+// Md5Str
 func Md5Str(str string) string {
-	h := md5.New()
-	h.Write([]byte(str))
-	return hex.EncodeToString(h.Sum(nil))
+	buf := md5.Sum([]byte(str))
+	return hex.EncodeToString(buf[:])
 }
 
 // Crc32 returns crc32 int
@@ -43,7 +46,7 @@ func Crc64(str string) uint64 {
 // HashPassword gen hashed password with given salt.
 func HashPassword(passwd string, salt string) string {
 	tempPasswd := pbkdf2.Key([]byte(passwd), []byte(salt), 2048, 32, sha256.New)
-	return fmt.Sprintf("%x", tempPasswd)
+	return hex.EncodeToString(tempPasswd)
 }
 
 // ConstantTimeCompare is used for password comparison in constant time.
