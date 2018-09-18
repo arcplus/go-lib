@@ -2,7 +2,6 @@ package scaffold
 
 import (
 	"context"
-	"runtime"
 
 	"github.com/arcplus/go-lib/errs"
 	"github.com/arcplus/go-lib/log"
@@ -44,20 +43,14 @@ func ServerErrorConvertor(ctx context.Context, req interface{}, info *grpc.Unary
 	return resp, err
 }
 
-const (
-	MAXSTACKSIZE = 4096
-)
-
 // Recovery interceptor to handle grpc panic
 func Recovery(ctx context.Context, req interface{}, info *grpc.UnaryServerInfo, handler grpc.UnaryHandler) (resp interface{}, err error) {
 	// recovery func
 	defer func() {
 		if r := recover(); r != nil {
-			stack := make([]byte, MAXSTACKSIZE)
-			stack = stack[:runtime.Stack(stack, false)]
-			log.Skip(1).Errorf("recover grpc invoke: %s\nerr: %v\nstack:\n%s", info.FullMethod, r, string(stack))
+			log.Skip(1).Errorf("recover grpc invoke: %s\nerr: %v\nstack:\n%s", info.FullMethod, r, tool.TakeStacktrace())
 			// if panic, set custom error to 'err', in order that client and sense it.
-			err = status.Errorf(codes.Internal, "panic error: %v", r)
+			err = status.Errorf(codes.Internal, "panic: %v", r)
 		}
 	}()
 
