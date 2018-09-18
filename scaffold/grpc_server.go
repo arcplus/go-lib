@@ -29,7 +29,7 @@ func ServerErrorConvertor(ctx context.Context, req interface{}, info *grpc.Unary
 			}
 		}
 		// TODO maybe we should filter logical err
-		logger.Errorf("method: %s\nreq:%s\nerr: %s", info.FullMethod, tool.MarshalToString(req), errs.StackTrace(err))
+		logger.Errorf("method: %s\nreq: %s\nerr: %s", info.FullMethod, tool.MarshalToString(req), errs.StackTrace(err))
 		if _, ok := status.FromError(err); !ok {
 			e := errs.ToError(err)
 
