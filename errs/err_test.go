@@ -1,6 +1,7 @@
 package errs
 
 import (
+	"encoding/json"
 	"errors"
 	"testing"
 )
@@ -20,6 +21,35 @@ func TestNew(t *testing.T) {
 		t.Fatal(e2)
 	}
 	t.Log(e2)
+}
+
+func TestNewRaw(t *testing.T) {
+	e1 := NewRaw(0, "ok")
+	if e1 != nil {
+		t.Fatalf("e0 should be nil")
+	}
+	t.Log(e1)
+	e2 := NewRaw(404, "not found")
+	if e2.Error() != "[404]not found" {
+		t.Fatal(e2)
+	}
+	t.Log(e2)
+}
+
+func TestNewWithAlert(t *testing.T) {
+	e1 := NewWithAlert(ErrBadRequest, "少参数", "missing params")
+	t.Log(e1)
+	data, _ := json.Marshal(e1)
+	t.Log(string(data))
+	t.Log(StackTrace(e1))
+}
+
+func TestNewRawWithAlert(t *testing.T) {
+	e1 := NewRawWithAlert(ErrBadRequest, "少参数", "missing params")
+	t.Log(e1)
+	data, _ := json.Marshal(e1)
+	t.Log(string(data))
+	t.Log(StackTrace(e1))
 }
 
 func TestWrap(t *testing.T) {

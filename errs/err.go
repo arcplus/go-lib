@@ -21,11 +21,10 @@ const (
 // Error implements error interface and add Code, so
 // errors with different message can be compared.
 type Error struct {
-	code    ErrCode // cause
-	message string  // message info
-	hint    string  // hint info
-
-	args []interface{}
+	code    ErrCode       // cause
+	message string        // message info
+	args    []interface{} // fmt
+	alert   string        // alert info
 
 	// previous holds the previous error in the error stack, if any.
 	prev error
@@ -37,22 +36,28 @@ type Error struct {
 }
 
 // new returns Error
-func new(code ErrCode, msg string, args []interface{}, prev error, skip int) *Error {
-	err := Error{
+func newError(code ErrCode, msg string, args []interface{}, prev error, skip int) *Error {
+	err := &Error{
 		code:    code,
 		message: msg,
 		args:    args,
 		prev:    prev,
 	}
-	_, err.file, err.line, _ = runtime.Caller(skip + 1)
-	return &err
+
+	// using skip -1 as no need line info
+	if skip != -1 {
+		_, err.file, err.line, _ = runtime.Caller(skip + 1)
+	}
+
+	return err
 }
 
+// Code return err casue code.
 func (e Error) Code() ErrCode {
 	return e.code
 }
 
-// Message returns formatted message
+// Message returns formatted message if args not empty
 func (e Error) Message() string {
 	if len(e.args) > 0 {
 		return fmt.Sprintf(e.message, e.args...)
@@ -60,7 +65,10 @@ func (e Error) Message() string {
 	return e.message
 }
 
-var _ error = &Error{}
+// Alert is used for err hint
+func (e Error) Alert() string {
+	return e.alert
+}
 
 // Error implements error interface.
 func (e *Error) Error() string {
@@ -79,19 +87,19 @@ func (e Error) Location() (file string, line int) {
 	return e.file, e.line
 }
 
+type errJSON struct {
+	Code    ErrCode `json:"code"`
+	Message string  `json:"message"`
+	Alert   string  `json:"alert"`
+}
+
 // MarshalJSON implements json.Marshaler interface.
 func (e Error) MarshalJSON() ([]byte, error) {
 	return json.Marshal(errJSON{
 		Code:    e.Code(),
 		Message: e.Message(),
-		Hint:    e.hint,
+		Alert:   e.alert,
 	})
-}
-
-type errJSON struct {
-	Code    ErrCode `json:"code"`
-	Message string  `json:"message"`
-	Hint    string  `json:"hint"`
 }
 
 // UnmarshalJSON implements json.Unmarshaler interface.
@@ -104,7 +112,7 @@ func (e *Error) UnmarshalJSON(data []byte) error {
 
 	e.code = info.Code
 	e.message = info.Message
-	e.hint = info.Hint
+	e.alert = info.Alert
 	return nil
 }
 
@@ -119,23 +127,50 @@ func New(code ErrCode, msg string, args ...interface{}) error {
 		return nil
 	}
 
-	return new(code, msg, args, nil, 1)
+	return newError(code, msg, args, nil, 1)
 }
 
-// NewWithHint is a drop in replacement for the standard library errors module that records
-// the location that the error is created but with hint msg for show.
+// NewRaw do the same as New but no line info added.
 //
 // For example:
-//    return errs.New(404, "用户不存在", "user not found")
+//    return errs.NewRaw(401, "missing id")
 //
-func NewWithHint(code ErrCode, hint string, msgf string, args ...interface{}) error {
+func NewRaw(code ErrCode, msg string, args ...interface{}) error {
 	if code == ErrOK {
 		return nil
 	}
 
-	e := new(code, msgf, args, nil, 1)
-	e.hint = hint
+	return newError(code, msg, args, nil, -1)
+}
 
+// NewWithAlert is a drop in replacement for the standard library errors module that records
+// the location that the error is created but with alert msg for show.
+//
+// For example:
+//    return errs.New(404, "用户不存在", "user not found")
+//
+func NewWithAlert(code ErrCode, alert string, msgf string, args ...interface{}) error {
+	if code == ErrOK {
+		return nil
+	}
+
+	e := newError(code, msgf, args, nil, 1)
+	e.alert = alert
+	return e
+}
+
+// NewRawWithAlert do the same as NewWithHint but no line info added.
+//
+// For example:
+//    return errs.New(404, "用户不存在", "user not found")
+//
+func NewRawWithAlert(code ErrCode, alert string, msgf string, args ...interface{}) error {
+	if code == ErrOK {
+		return nil
+	}
+
+	e := newError(code, msgf, args, nil, -1)
+	e.alert = alert
 	return e
 }
 
@@ -169,7 +204,7 @@ func Wrap(err error, code ErrCode, v ...interface{}) error {
 		args = v[1:]
 	}
 
-	return new(code, msg, args, err, 1)
+	return newError(code, msg, args, err, 1)
 }
 
 // Trace add file and line info to err.
@@ -184,7 +219,7 @@ func Trace(err error) error {
 		return nil
 	}
 
-	newErr := new(ErrInternal, "", nil, nil, 1)
+	newErr := newError(ErrInternal, "", nil, nil, 1)
 
 	v, ok := err.(*Error)
 	if ok {
@@ -212,7 +247,7 @@ func Annotate(err error, msg string, args ...interface{}) error {
 		return nil
 	}
 
-	newErr := new(ErrInternal, msg, args, err, 1)
+	newErr := newError(ErrInternal, msg, args, err, 1)
 	newErr.prev = err
 
 	if v, ok := err.(*Error); ok {
@@ -236,7 +271,7 @@ func DeferredAnnotate(err *error, msg string, args ...interface{}) {
 		return
 	}
 
-	newErr := new(ErrInternal, msg, args, *err, 1)
+	newErr := newError(ErrInternal, msg, args, *err, 1)
 	newErr.prev = *err
 
 	if v, ok := (*err).(*Error); ok {
@@ -251,7 +286,7 @@ func Internal(err error) error {
 	if err == nil {
 		return nil
 	}
-	return new(ErrInternal, err.Error(), nil, nil, 1)
+	return newError(ErrInternal, err.Error(), nil, nil, 1)
 }
 
 // BadRequest error
@@ -262,14 +297,14 @@ func BadRequest(msg interface{}, args ...interface{}) error {
 		msgStr = v
 	case error:
 		if e, ok := v.(*Error); ok {
-			return new(ErrBadRequest, e.Message(), nil, e, 1)
+			return newError(ErrBadRequest, e.Message(), nil, e, 1)
 		}
-		return new(ErrBadRequest, v.Error(), nil, v, 1)
+		return newError(ErrBadRequest, v.Error(), nil, v, 1)
 	default:
 		msgStr = fmt.Sprint(msg)
 	}
 
-	return new(ErrBadRequest, msgStr, args, nil, 1)
+	return newError(ErrBadRequest, msgStr, args, nil, 1)
 }
 
 // UnAuthorized error
@@ -280,12 +315,12 @@ func UnAuthorized(msg interface{}, args ...interface{}) error {
 		msgStr = v
 	case error:
 		if e, ok := v.(*Error); ok {
-			return new(ErrUnAuth, e.Message(), nil, e, 1)
+			return newError(ErrUnAuth, e.Message(), nil, e, 1)
 		}
-		return new(ErrUnAuth, v.Error(), nil, v, 1)
+		return newError(ErrUnAuth, v.Error(), nil, v, 1)
 	default:
 		msgStr = fmt.Sprint(msg)
 	}
 
-	return new(ErrUnAuth, msgStr, args, nil, 1)
+	return newError(ErrUnAuth, msgStr, args, nil, 1)
 }

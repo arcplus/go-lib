@@ -6,39 +6,39 @@ import (
 
 	"github.com/arcplus/go-lib/errs"
 	"github.com/arcplus/go-lib/log"
+	"github.com/arcplus/go-lib/scaffold/internal"
 	"github.com/arcplus/go-lib/tool"
 
+	"github.com/golang/protobuf/ptypes"
+	"github.com/golang/protobuf/ptypes/any"
+	spb "google.golang.org/genproto/googleapis/rpc/status"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 )
 
-// UnaryInterceptorChain build the multi interceptors into one interceptor chain.
-func UnaryInterceptorChain(interceptors ...grpc.UnaryServerInterceptor) grpc.UnaryServerInterceptor {
-	return func(ctx context.Context, req interface{}, info *grpc.UnaryServerInfo, handler grpc.UnaryHandler) (resp interface{}, err error) {
-		chain := handler
-		for i := len(interceptors) - 1; i >= 0; i-- {
-			chain = build(interceptors[i], chain, info)
-		}
-		return chain(ctx, req)
-	}
-}
-
-// build is the interceptor chain helper
-func build(c grpc.UnaryServerInterceptor, n grpc.UnaryHandler, info *grpc.UnaryServerInfo) grpc.UnaryHandler {
-	return func(ctx context.Context, req interface{}) (interface{}, error) {
-		return c(ctx, req, info, n)
-	}
-}
-
-// WrapError wrap *Error to gRPC error
-func WrapError(ctx context.Context, req interface{}, info *grpc.UnaryServerInfo, handler grpc.UnaryHandler) (resp interface{}, err error) {
+// ServerErrorConvertor convert *Error to gRPC error
+func ServerErrorConvertor(ctx context.Context, req interface{}, info *grpc.UnaryServerInfo, handler grpc.UnaryHandler) (resp interface{}, err error) {
 	resp, err = handler(ctx, req)
 	if err != nil {
 		log.Skip(1).Errorf("method: %s\nerr: %s\nreq:%s", info.FullMethod, errs.StackTrace(err), tool.MarshalToString(req))
 		if _, ok := status.FromError(err); !ok {
 			e := errs.ToError(err)
-			err = status.Error(codes.Code(e.Code()), e.Message())
+
+			s := &spb.Status{
+				Code:    int32(e.Code()),
+				Message: e.Message(),
+			}
+
+			if alert := e.Alert(); alert != "" {
+				errInfo := &internal.ErrorInfo{
+					Alert: alert,
+				}
+				a, _ := ptypes.MarshalAny(errInfo)
+				s.Details = []*any.Any{a}
+			}
+
+			err = status.ErrorProto(s)
 		}
 	}
 	return resp, err
@@ -65,7 +65,7 @@ func Recovery(ctx context.Context, req interface{}, info *grpc.UnaryServerInfo, 
 }
 
 // GRPCServeOpts is helper  UnaryInterceptorChain with Recovery and WrapError
-var GRPCServerOpts = grpc.UnaryInterceptor(UnaryInterceptorChain(Recovery, WrapError))
+var GRPCServerOpts = grpc.UnaryInterceptor(UnaryInterceptorChain(Recovery, ServerErrorConvertor))
 
 // NewGRPCServer is helper func to create *grpc.Server
 func NewGRPCServer(opt ...grpc.ServerOption) *grpc.Server {

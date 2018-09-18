@@ -48,6 +48,7 @@ func IsCode(err error, code ErrCode) bool {
 	}
 }
 
+// ToError try convert err to *Error without line info
 func ToError(err error) *Error {
 	if err == nil {
 		return nil
@@ -56,7 +57,14 @@ func ToError(err error) *Error {
 		return e
 	}
 
-	return new(ErrInternal, err.Error(), nil, err, 1)
+	return newError(ErrInternal, err.Error(), nil, err, -1)
+}
+
+// WithAlert change the *Error alert
+func WithAlert(err error, alert string) {
+	if e, ok := err.(*Error); ok {
+		e.alert = alert
+	}
 }
 
 var _ locationer = Error{}
@@ -70,6 +78,7 @@ func StackTrace(err error) string {
 }
 
 // Stack return all errs with line info if possible
+// TODO stack buff optimize
 func stack(err error) []string {
 	if err == nil {
 		return nil
@@ -81,10 +90,9 @@ func stack(err error) []string {
 		if err, ok := err.(locationer); ok {
 			file, line := err.Location()
 			// Strip off the leading GOPATH/src path elements.
-			file = trimGoPath(file)
 			if file != "" {
-				buff = append(buff, fmt.Sprintf("%s:%d", file, line)...)
-				buff = append(buff, ": "...)
+				file = trimGoPath(file)
+				buff = append(buff, fmt.Sprintf("%s:%d ", file, line)...)
 			}
 		}
 
