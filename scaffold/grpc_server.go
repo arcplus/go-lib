@@ -21,17 +21,20 @@ import (
 func ServerErrorConvertor(ctx context.Context, req interface{}, info *grpc.UnaryServerInfo, handler grpc.UnaryHandler) (resp interface{}, err error) {
 	resp, err = handler(ctx, req)
 	if err != nil {
-		logger := log.Skip(1)
-		if md, ok := metadata.FromIncomingContext(ctx); ok {
-			tid := md.Get("x-request-id")
-			if len(tid) != 0 && tid[0] != "" {
-				logger = logger.Trace(tid[0])
-			}
-		}
-		// TODO maybe we should filter logical err
-		logger.Errorf("method: %s\nreq: %s\nerr: %s", info.FullMethod, tool.MarshalToString(req), errs.StackTrace(err))
 		if _, ok := status.FromError(err); !ok {
 			e := errs.ToError(err)
+
+			// not logical error code
+			if e.Code() < 1400 {
+				logger := log.Skip(1)
+				if md, ok := metadata.FromIncomingContext(ctx); ok {
+					tid := md.Get("x-request-id")
+					if len(tid) != 0 && tid[0] != "" {
+						logger = logger.Trace(tid[0])
+					}
+				}
+				logger.Errorf("method: %s\nreq: %s\nerr: %s", info.FullMethod, tool.MarshalToString(req), errs.StackTrace(err))
+			}
 
 			s := &spb.Status{
 				Code:    int32(e.Code()),
