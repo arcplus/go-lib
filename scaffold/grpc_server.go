@@ -13,6 +13,7 @@ import (
 	spb "google.golang.org/genproto/googleapis/rpc/status"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"
+	"google.golang.org/grpc/metadata"
 	"google.golang.org/grpc/status"
 )
 
@@ -20,7 +21,15 @@ import (
 func ServerErrorConvertor(ctx context.Context, req interface{}, info *grpc.UnaryServerInfo, handler grpc.UnaryHandler) (resp interface{}, err error) {
 	resp, err = handler(ctx, req)
 	if err != nil {
-		log.Skip(1).Errorf("method: %s\nerr: %s\nreq:%s", info.FullMethod, errs.StackTrace(err), tool.MarshalToString(req))
+		logger := log.Skip(1)
+		if md, ok := metadata.FromIncomingContext(ctx); ok {
+			tid := md.Get("x-request-id")
+			if len(tid) != 0 && tid[0] != "" {
+				logger = logger.Trace(tid[0])
+			}
+		}
+		// TODO maybe we should filter logical err
+		logger.Errorf("method: %s\nreq:%s\nerr: %s", info.FullMethod, tool.MarshalToString(req), errs.StackTrace(err))
 		if _, ok := status.FromError(err); !ok {
 			e := errs.ToError(err)
 
@@ -48,7 +57,7 @@ func Recovery(ctx context.Context, req interface{}, info *grpc.UnaryServerInfo, 
 	// recovery func
 	defer func() {
 		if r := recover(); r != nil {
-			log.Skip(1).Errorf("recover grpc invoke: %s\nerr: %v\nstack:\n%s", info.FullMethod, r, tool.TakeStacktrace())
+			log.Skip(1).Errorf("recover grpc invoke: %s\nreq: %v\nerr: %v\nstack:\n%s", info.FullMethod, tool.MarshalToString(req), r, tool.TakeStacktrace())
 			// if panic, set custom error to 'err', in order that client and sense it.
 			err = status.Errorf(codes.Internal, "panic: %v", r)
 		}
