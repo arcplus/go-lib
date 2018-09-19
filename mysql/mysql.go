@@ -23,6 +23,7 @@ type Conf struct {
 	ConnMaxLifetime time.Duration
 	MaxOpenConns    int
 	MaxIdleConns    int
+	MapperFunc      func(string) string // struct tag convert
 	db              *sqlx.DB
 }
 
@@ -43,9 +44,24 @@ func Register(name string, conf Conf) error {
 		return err
 	}
 
+	// set default 15min max conn, 512 max open, 64 max idl
+	if conf.ConnMaxLifetime == 0 {
+		conf.ConnMaxLifetime = time.Minute * 15
+	}
+	if conf.MaxOpenConns == 0 {
+		conf.MaxIdleConns = 512
+	}
+	if conf.MaxIdleConns == 0 {
+		conf.MaxIdleConns = 64
+	}
+
 	db.SetConnMaxLifetime(conf.ConnMaxLifetime)
 	db.SetMaxOpenConns(conf.MaxOpenConns)
 	db.SetMaxIdleConns(conf.MaxIdleConns)
+
+	if conf.MapperFunc != nil {
+		db.MapperFunc(conf.MapperFunc)
+	}
 
 	conf.db = db
 
