@@ -80,6 +80,11 @@ func TestTrace(t *testing.T) {
 	KV("x", "y").Trace("uuid-uuid-uuid-uuid").Error("trace test3")
 }
 
+func TestCaller(t *testing.T) {
+	Caller().Info("caller test1")
+	KV("x", "y").Caller().Errorf("trace test2")
+}
+
 var sLog = Sample(&BasicSampler{N: 2})
 
 func TestSample(t *testing.T) {

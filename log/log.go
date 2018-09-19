@@ -32,13 +32,13 @@ const (
 
 // Log struct.
 type Log struct {
-	depth         int
-	lineNumEnable bool
-	stackEnable   bool
-	mu            *sync.RWMutex
-	kv            []string
-	zl            *zerolog.Logger
-	sampler       zerolog.Sampler
+	depth        int
+	callerEnable bool
+	stackEnable  bool
+	mu           *sync.RWMutex
+	kv           []string
+	zl           *zerolog.Logger
+	sampler      zerolog.Sampler
 }
 
 var zl = zerolog.New(zerolog.ConsoleWriter{Out: os.Stdout}).With().Timestamp().Logger()
@@ -220,14 +220,14 @@ func (l Log) WithStack() Log {
 	return l
 }
 
-func WithLineNum() Log {
+func Caller() Log {
 	l := logger
-	l.lineNumEnable = true
+	l.callerEnable = true
 	return l
 }
 
-func (l Log) WithLineNum() Log {
-	l.lineNumEnable = true
+func (l Log) Caller() Log {
+	l.callerEnable = true
 	return l
 }
 
@@ -311,13 +311,13 @@ func (l Log) levelLog(lv Level, format string, v ...interface{}) {
 		}
 	}
 
-	if l.lineNumEnable {
+	if l.callerEnable {
 		_, file, line, _ := runtime.Caller(depth + l.depth)
 		if prefixSize != 0 && len(file) > prefixSize {
 			file = file[prefixSize:]
 		}
 		file += ":" + strconv.FormatInt(int64(line), 10)
-		evt.Str("ln", file)
+		evt.Str("caller", file)
 	}
 
 	if l.stackEnable {
