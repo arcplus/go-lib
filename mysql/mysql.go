@@ -23,7 +23,7 @@ type Conf struct {
 	ConnMaxLifetime time.Duration
 	MaxOpenConns    int
 	MaxIdleConns    int
-	MapperFunc      func(string) string // struct tag convert
+	MapperFunc      func(string) string // struct field name convert
 	db              *sqlx.DB
 }
 
