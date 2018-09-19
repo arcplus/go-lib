@@ -30,6 +30,10 @@ type Conf struct {
 // Register dsn format -> [username[:password]@][protocol[(address)]]/dbname[?param1=value1&...&paramN=valueN]
 // each db should only register once
 func Register(name string, conf Conf) error {
+	if name == "" {
+		name = "db"
+	}
+
 	sqlPool.Lock()
 	defer sqlPool.Unlock()
 
@@ -78,18 +82,30 @@ func Client(name string) (*sqlx.DB, error) {
 	sqlPool.RLock()
 
 	client, ok := sqlPool.clients[name]
-	if !ok {
+	if ok {
 		sqlPool.RUnlock()
-		return nil, fmt.Errorf("db %q not registered", name)
+		return client.db, nil
 	}
 
 	sqlPool.RUnlock()
-	return client.db, nil
+	return nil, fmt.Errorf("db %q not registered", name)
 }
 
+// Deprecated, using DB() instead.
 // Get return mysql client with given name or nil if not exist
 func Get(name string) *sqlx.DB {
 	cli, _ := Client(name)
+	return cli
+}
+
+// DB is helper func returns default db
+func DB(name ...string) *sqlx.DB {
+	var cli *sqlx.DB
+	if len(name) == 0 {
+		cli, _ = Client("db")
+	} else {
+		cli, _ = Client(name[0])
+	}
 	return cli
 }
 
