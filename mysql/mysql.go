@@ -59,7 +59,10 @@ func Register(name string, conf Conf) error {
 	db.SetMaxOpenConns(conf.MaxOpenConns)
 	db.SetMaxIdleConns(conf.MaxIdleConns)
 
-	if conf.MapperFunc != nil {
+	// using snakecase default
+	if conf.MapperFunc == nil {
+		db.MapperFunc(snakecase)
+	} else {
 		db.MapperFunc(conf.MapperFunc)
 	}
 
