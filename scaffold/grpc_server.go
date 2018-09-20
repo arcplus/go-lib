@@ -1,6 +1,7 @@
 package scaffold
 
 import (
+	"bytes"
 	"context"
 
 	"github.com/arcplus/go-lib/errs"
@@ -19,25 +20,43 @@ import (
 
 // ServerErrorConvertor convert *Error to gRPC error
 func ServerErrorConvertor(ctx context.Context, req interface{}, info *grpc.UnaryServerInfo, handler grpc.UnaryHandler) (resp interface{}, err error) {
+	tid := "x-mock-id"
+	if md, ok := metadata.FromIncomingContext(ctx); ok {
+		if t := md.Get("x-request-id"); len(t) != 0 && t[0] != "" {
+			tid = t[0]
+		}
+	}
+
+	logger := log.Trace(tid)
+
+	// TODO using pool
+	buf := &bytes.Buffer{}
+
+	buf.WriteString("method: ")
+	buf.WriteString(info.FullMethod)
+
+	buf.WriteString("\nreq: ")
+	buf.WriteString(tool.MarshalToString(req))
+
+	// recover
+	defer func() {
+		if r := recover(); r != nil {
+			logger.Skip(1).Errorf("recover grpc: %s\nerr: %v\nstack:\n%s", buf.String(), r, log.TakeStacktrace())
+			// if panic, set custom error to 'err', in order that client and sense it.
+			err = status.Errorf(codes.Internal, "panic: %v", r)
+		}
+	}()
+
 	resp, err = handler(ctx, req)
+	var code int32
 	if err != nil {
 		if _, ok := status.FromError(err); !ok {
 			e := errs.ToError(err)
 
-			// not logical error code
-			if e.Code() < 1400 {
-				logger := log.Skip(1)
-				if md, ok := metadata.FromIncomingContext(ctx); ok {
-					tid := md.Get("x-request-id")
-					if len(tid) != 0 && tid[0] != "" {
-						logger = logger.Trace(tid[0])
-					}
-				}
-				logger.Errorf("method: %s\nreq: %s\nerr: %s", info.FullMethod, tool.MarshalToString(req), errs.StackTrace(err))
-			}
+			code = int32(e.Code())
 
 			s := &spb.Status{
-				Code:    int32(e.Code()),
+				Code:    code,
 				Message: e.Message(),
 			}
 
@@ -52,25 +71,24 @@ func ServerErrorConvertor(ctx context.Context, req interface{}, info *grpc.Unary
 			err = status.ErrorProto(s)
 		}
 	}
+
+	buf.WriteString("\nresp: ")
+	buf.WriteString(tool.MarshalToString(resp))
+
+	buf.WriteString("\nerr: ")
+	buf.WriteString(tool.MarshalToString(err))
+
+	if err != nil && code < 1400 {
+		logger.Error(buf.String())
+	} else {
+		logger.Debug(buf.String())
+	}
+
 	return resp, err
 }
 
-// Recovery interceptor to handle grpc panic
-func Recovery(ctx context.Context, req interface{}, info *grpc.UnaryServerInfo, handler grpc.UnaryHandler) (resp interface{}, err error) {
-	// recovery func
-	defer func() {
-		if r := recover(); r != nil {
-			log.Skip(1).Errorf("recover grpc invoke: %s\nreq: %v\nerr: %v\nstack:\n%s", info.FullMethod, tool.MarshalToString(req), r, tool.TakeStacktrace())
-			// if panic, set custom error to 'err', in order that client and sense it.
-			err = status.Errorf(codes.Internal, "panic: %v", r)
-		}
-	}()
-
-	return handler(ctx, req)
-}
-
 // GRPCServeOpts is helper  UnaryInterceptorChain with Recovery and WrapError
-var GRPCServerOpts = grpc.UnaryInterceptor(UnaryInterceptorChain(Recovery, ServerErrorConvertor))
+var GRPCServerOpts = grpc.UnaryInterceptor(ServerErrorConvertor)
 
 // NewGRPCServer is helper func to create *grpc.Server
 func NewGRPCServer(opt ...grpc.ServerOption) *grpc.Server {
