@@ -3,9 +3,6 @@ package tool
 import (
 	"bytes"
 	"encoding/json"
-	"sync"
-
-	"github.com/arcplus/go-lib/pool"
 
 	"github.com/golang/protobuf/jsonpb"
 	"github.com/golang/protobuf/proto"
@@ -22,6 +19,10 @@ var jbmIndent = &jsonpb.Marshaler{
 
 // MarshalToString convert proto or struct to json string
 func MarshalToString(v interface{}, withIndent ...bool) string {
+	if v == nil {
+		return "nil"
+	}
+
 	switch t := v.(type) {
 	case proto.Message:
 		var marshaler *jsonpb.Marshaler
@@ -55,20 +56,4 @@ func MarshalProto(pb proto.Message) []byte {
 	buff := &bytes.Buffer{}
 	jbm.Marshal(buff, pb)
 	return buff.Bytes()
-}
-
-var bufferPool = pool.NewBytesPool()
-
-var stacktracePool = sync.Pool{
-	New: func() interface{} {
-		return newProgramCounters(64)
-	},
-}
-
-type programCounters struct {
-	pcs []uintptr
-}
-
-func newProgramCounters(size int) *programCounters {
-	return &programCounters{make([]uintptr, size)}
 }
