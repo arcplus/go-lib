@@ -6,22 +6,33 @@ import (
 	"runtime"
 )
 
-type ErrCode uint32
+type Code uint32
+
+// Deprecated using CodeXXX instead
+const (
+	ErrOK         Code = 0
+	ErrInternal   Code = 1000
+	ErrBadRequest Code = 1400
+	ErrUnAuth     Code = 1401 // miss token
+	ErrForbidden  Code = 1403
+	ErrNotFound   Code = 1404
+	ErrConflict   Code = 1409 // conflict error
+)
 
 const (
-	ErrOK         ErrCode = 0
-	ErrInternal   ErrCode = 1000
-	ErrBadRequest ErrCode = 1400
-	ErrUnAuth     ErrCode = 1401 // miss token
-	ErrForbidden  ErrCode = 1403
-	ErrNotFound   ErrCode = 1404
-	ErrConflict   ErrCode = 1409 // conflict error
+	CodeOK         Code = 0
+	CodeInternal   Code = 1000
+	CodeBadRequest Code = 1400
+	CodeUnAuth     Code = 1401 // miss token
+	CodeForbidden  Code = 1403
+	CodeNotFound   Code = 1404
+	CodeConflict   Code = 1409 // conflict error
 )
 
 // Error implements error interface and add Code, so
 // errors with different message can be compared.
 type Error struct {
-	code    ErrCode       // cause
+	code    Code          // cause
 	message string        // message info
 	args    []interface{} // fmt
 	alert   string        // alert info
@@ -36,7 +47,7 @@ type Error struct {
 }
 
 // new returns Error
-func newError(code ErrCode, msg string, args []interface{}, prev error, skip int) *Error {
+func newError(code Code, msg string, args []interface{}, prev error, skip int) *Error {
 	err := &Error{
 		code:    code,
 		message: msg,
@@ -53,7 +64,7 @@ func newError(code ErrCode, msg string, args []interface{}, prev error, skip int
 }
 
 // Code return err casue code.
-func (e Error) Code() ErrCode {
+func (e Error) Code() Code {
 	return e.code
 }
 
@@ -88,9 +99,9 @@ func (e Error) Location() (file string, line int) {
 }
 
 type errJSON struct {
-	Code    ErrCode `json:"code"`
-	Message string  `json:"message"`
-	Alert   string  `json:"alert"`
+	Code    Code   `json:"code"`
+	Message string `json:"message"`
+	Alert   string `json:"alert"`
 }
 
 // MarshalJSON implements json.Marshaler interface.
@@ -122,8 +133,8 @@ func (e *Error) UnmarshalJSON(data []byte) error {
 // For example:
 //    return errs.New(401, "missing id")
 //
-func New(code ErrCode, msg string, args ...interface{}) error {
-	if code == ErrOK {
+func New(code Code, msg string, args ...interface{}) error {
+	if code == CodeOK {
 		return nil
 	}
 
@@ -135,8 +146,8 @@ func New(code ErrCode, msg string, args ...interface{}) error {
 // For example:
 //    return errs.NewRaw(401, "missing id")
 //
-func NewRaw(code ErrCode, msg string, args ...interface{}) error {
-	if code == ErrOK {
+func NewRaw(code Code, msg string, args ...interface{}) error {
+	if code == CodeOK {
 		return nil
 	}
 
@@ -149,8 +160,8 @@ func NewRaw(code ErrCode, msg string, args ...interface{}) error {
 // For example:
 //    return errs.New(404, "用户不存在", "user not found")
 //
-func NewWithAlert(code ErrCode, alert string, msgf string, args ...interface{}) error {
-	if code == ErrOK {
+func NewWithAlert(code Code, alert string, msgf string, args ...interface{}) error {
+	if code == CodeOK {
 		return nil
 	}
 
@@ -164,8 +175,8 @@ func NewWithAlert(code ErrCode, alert string, msgf string, args ...interface{}) 
 // For example:
 //    return errs.New(404, "用户不存在", "user not found")
 //
-func NewRawWithAlert(code ErrCode, alert string, msgf string, args ...interface{}) error {
-	if code == ErrOK {
+func NewRawWithAlert(code Code, alert string, msgf string, args ...interface{}) error {
+	if code == CodeOK {
 		return nil
 	}
 
@@ -182,8 +193,8 @@ func NewRawWithAlert(code ErrCode, alert string, msgf string, args ...interface{
 //    if err!=nil {
 //        return errs.Wrap(err, 500, "internal err")
 //    }
-func Wrap(err error, code ErrCode, v ...interface{}) error {
-	if err == nil || code == ErrOK {
+func Wrap(err error, code Code, v ...interface{}) error {
+	if err == nil || code == CodeOK {
 		return nil
 	}
 
@@ -219,7 +230,7 @@ func Trace(err error) error {
 		return nil
 	}
 
-	newErr := newError(ErrInternal, "", nil, nil, 1)
+	newErr := newError(CodeInternal, "", nil, nil, 1)
 
 	v, ok := err.(*Error)
 	if ok {
@@ -247,7 +258,7 @@ func Annotate(err error, msg string, args ...interface{}) error {
 		return nil
 	}
 
-	newErr := newError(ErrInternal, msg, args, err, 1)
+	newErr := newError(CodeInternal, msg, args, err, 1)
 	newErr.prev = err
 
 	if v, ok := err.(*Error); ok {
@@ -271,7 +282,7 @@ func DeferredAnnotate(err *error, msg string, args ...interface{}) {
 		return
 	}
 
-	newErr := newError(ErrInternal, msg, args, *err, 1)
+	newErr := newError(CodeInternal, msg, args, *err, 1)
 	newErr.prev = *err
 
 	if v, ok := (*err).(*Error); ok {
@@ -286,7 +297,7 @@ func Internal(err error) error {
 	if err == nil {
 		return nil
 	}
-	return newError(ErrInternal, err.Error(), nil, nil, 1)
+	return newError(CodeInternal, err.Error(), nil, nil, 1)
 }
 
 // BadRequest error
@@ -297,14 +308,14 @@ func BadRequest(msg interface{}, args ...interface{}) error {
 		msgStr = v
 	case error:
 		if e, ok := v.(*Error); ok {
-			return newError(ErrBadRequest, e.Message(), nil, e, 1)
+			return newError(CodeBadRequest, e.Message(), nil, e, 1)
 		}
-		return newError(ErrBadRequest, v.Error(), nil, v, 1)
+		return newError(CodeBadRequest, v.Error(), nil, v, 1)
 	default:
 		msgStr = fmt.Sprint(msg)
 	}
 
-	return newError(ErrBadRequest, msgStr, args, nil, 1)
+	return newError(CodeBadRequest, msgStr, args, nil, 1)
 }
 
 // UnAuthorized error
@@ -315,12 +326,12 @@ func UnAuthorized(msg interface{}, args ...interface{}) error {
 		msgStr = v
 	case error:
 		if e, ok := v.(*Error); ok {
-			return newError(ErrUnAuth, e.Message(), nil, e, 1)
+			return newError(CodeUnAuth, e.Message(), nil, e, 1)
 		}
-		return newError(ErrUnAuth, v.Error(), nil, v, 1)
+		return newError(CodeUnAuth, v.Error(), nil, v, 1)
 	default:
 		msgStr = fmt.Sprint(msg)
 	}
 
-	return newError(ErrUnAuth, msgStr, args, nil, 1)
+	return newError(CodeUnAuth, msgStr, args, nil, 1)
 }

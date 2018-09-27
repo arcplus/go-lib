@@ -32,7 +32,7 @@ func Is(err, target error) bool {
 	}
 }
 
-func IsCode(err error, code ErrCode) bool {
+func IsCode(err error, code Code) bool {
 	for {
 		if err == nil {
 			return false
@@ -57,7 +57,7 @@ func ToError(err error) *Error {
 		return e
 	}
 
-	return newError(ErrInternal, err.Error(), nil, err, -1)
+	return newError(CodeInternal, err.Error(), nil, err, -1)
 }
 
 // WithAlert change the *Error alert

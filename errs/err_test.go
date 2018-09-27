@@ -7,7 +7,7 @@ import (
 )
 
 var errGo = errors.New("go error")
-var errCodeTest ErrCode = 9999
+var errCodeTest Code = 9999
 var errNew = New(errCodeTest, "errs.Error")
 
 func TestNew(t *testing.T) {
@@ -37,7 +37,7 @@ func TestNewRaw(t *testing.T) {
 }
 
 func TestNewWithAlert(t *testing.T) {
-	e1 := NewWithAlert(ErrBadRequest, "少参数", "missing params")
+	e1 := NewWithAlert(CodeBadRequest, "少参数", "missing params")
 	t.Log(e1)
 	data, _ := json.Marshal(e1)
 	t.Log(string(data))
@@ -45,7 +45,7 @@ func TestNewWithAlert(t *testing.T) {
 }
 
 func TestNewRawWithAlert(t *testing.T) {
-	e1 := NewRawWithAlert(ErrBadRequest, "少参数", "missing params")
+	e1 := NewRawWithAlert(CodeBadRequest, "少参数", "missing params")
 	t.Log(e1)
 	data, _ := json.Marshal(e1)
 	t.Log(string(data))

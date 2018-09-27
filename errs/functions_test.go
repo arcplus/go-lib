@@ -24,8 +24,8 @@ func TestIs(t *testing.T) {
 }
 
 func TestIsCode(t *testing.T) {
-	if IsCode(errGo, ErrInternal) {
-		t.Fatalf("%v should not code %d", errGo, ErrInternal)
+	if IsCode(errGo, CodeInternal) {
+		t.Fatalf("%v should not code %d", errGo, CodeInternal)
 	}
 	if !IsCode(errNew, errCodeTest) {
 		t.Fatalf("%v should not code %d", errNew, errCodeTest)
