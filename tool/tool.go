@@ -3,6 +3,9 @@ package tool
 import (
 	"bytes"
 	"encoding/json"
+	"io"
+
+	"github.com/arcplus/go-lib/errs"
 
 	"github.com/golang/protobuf/jsonpb"
 	"github.com/golang/protobuf/proto"
@@ -24,8 +27,20 @@ var jbu = &jsonpb.Unmarshaler{
 }
 
 // UnmarshalProto convert bytes to proto
-func UnmarshalProto(data []byte, pb proto.Message) error {
-	return jbu.Unmarshal(bytes.NewBuffer(data), pb)
+// in should be io.Reader、 bytes or string
+func UnmarshalProto(in interface{}, pb proto.Message) error {
+	var reader io.Reader
+	switch t := in.(type) {
+	case io.Reader:
+		reader = t
+	case []byte:
+		reader = bytes.NewBuffer(t)
+	case string:
+		reader = bytes.NewBufferString(t)
+	default:
+		return errs.New(errs.CodeInternal, "in should be io.Reader or bytes")
+	}
+	return jbu.Unmarshal(reader, pb)
 }
 
 var jbmIndent = &jsonpb.Marshaler{
