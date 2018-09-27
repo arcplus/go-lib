@@ -12,6 +12,22 @@ var jbm = &jsonpb.Marshaler{
 	EmitDefaults: true,
 }
 
+// MarshalProto convert proto to bytes without error
+func MarshalProto(pb proto.Message) []byte {
+	buff := &bytes.Buffer{}
+	jbm.Marshal(buff, pb)
+	return buff.Bytes()
+}
+
+var jbu = &jsonpb.Unmarshaler{
+	AllowUnknownFields: true,
+}
+
+// UnmarshalProto convert bytes to proto
+func UnmarshalProto(data []byte, pb proto.Message) error {
+	return jbu.Unmarshal(bytes.NewBuffer(data), pb)
+}
+
 var jbmIndent = &jsonpb.Marshaler{
 	EmitDefaults: true,
 	Indent:       "  ",
@@ -49,11 +65,4 @@ func MarshalToString(v interface{}, withIndent ...bool) string {
 		}
 		return string(data)
 	}
-}
-
-// MarshalProto convert proto to bytes
-func MarshalProto(pb proto.Message) []byte {
-	buff := &bytes.Buffer{}
-	jbm.Marshal(buff, pb)
-	return buff.Bytes()
 }
