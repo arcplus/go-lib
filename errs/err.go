@@ -8,6 +8,9 @@ import (
 
 type Code uint32
 
+// Deprecated using Code instead
+type ErrCode = Code
+
 // Deprecated using CodeXXX instead
 const (
 	ErrOK         Code = 0

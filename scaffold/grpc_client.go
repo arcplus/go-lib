@@ -21,7 +21,7 @@ func ClientErrorConvertor(ctx context.Context, method string, req, reply interfa
 		}
 
 		spb := s.Proto()
-		err = errs.NewRaw(errs.ErrCode(spb.Code), spb.Message)
+		err = errs.NewRaw(errs.Code(spb.Code), spb.Message)
 
 		if len(spb.Details) != 0 {
 			errInfo := &internal.ErrorInfo{}
