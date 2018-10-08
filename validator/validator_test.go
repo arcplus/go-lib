@@ -185,6 +185,12 @@ func TestValidateFunc(t *testing.T) {
 	}
 	t.Log(err)
 
+	err = Validate(3.14159, ":range(3.14|3.15)")
+	if err != nil {
+		t.Fatal("should be nil")
+	}
+	t.Log(err)
+
 	err = Validate("xyz", ":in(abc|123|mn)")
 	if err == nil {
 		t.Fatal("should not in err")

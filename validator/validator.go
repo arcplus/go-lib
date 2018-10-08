@@ -138,7 +138,8 @@ func underscoreToCamelCase(s string) string {
 type ValidateFunc func(rv reflect.Value, p string) error
 
 var funcMap = map[string]ValidateFunc{
-	"range":   length,
+	"range":   _range,
+	"len":     _range,
 	"in":      in,
 	"each":    each,
 	"default": defaultValue,
@@ -150,37 +151,80 @@ func Register(name string, f ValidateFunc) {
 }
 
 // [low,high)
-func length(rv reflect.Value, p string) error {
-	var t int
+func _range(rv reflect.Value, p string) error {
+	var t interface{}
 	var typeStr string
 	switch rv.Kind() {
-	case reflect.String, reflect.Map, reflect.Slice, reflect.Array:
+	case reflect.String, reflect.Slice, reflect.Map, reflect.Array:
 		t = rv.Len()
 		typeStr = "len"
 	case reflect.Int, reflect.Int8, reflect.Int16, reflect.Int32, reflect.Int64:
-		t = int(rv.Int())
+		t = rv.Int()
 		typeStr = "num"
+	case reflect.Float32, reflect.Float64:
+		t = rv.Float()
+		typeStr = "float"
 	default:
-		return fmt.Errorf("func usage error %s", rv.Kind())
+		return fmt.Errorf("func range usage error %s", rv.Kind())
 	}
 
 	lh := strings.Split(p, "|")
 
 	switch len(lh) {
 	case 2:
-		high, _ := strconv.Atoi(lh[1])
-		if t >= high {
-			return fmt.Errorf("%s '%d' gte", typeStr, t)
+		switch typeStr {
+		case "len":
+			high, err := strconv.Atoi(lh[1])
+			if err != nil {
+				return err
+			}
+			if t.(int) >= high {
+				return fmt.Errorf("%s '%d' gte", typeStr, t)
+			}
+		case "num":
+			high, err := strconv.ParseInt(lh[1], 10, 64)
+			if err != nil {
+				return err
+			}
+			if t.(int64) >= high {
+				return fmt.Errorf("%s '%d' gte", typeStr, t)
+			}
+		case "float":
+			high, err := strconv.ParseFloat(lh[1], 64)
+			if err != nil {
+				return err
+			}
+			if t.(float64) >= high {
+				return fmt.Errorf("%s '%d' gte", typeStr, t)
+			}
 		}
 		fallthrough
 	case 1:
-		low, err := strconv.Atoi(lh[0])
-		if err != nil {
-			return err
-		}
-
-		if t >= low {
-			return nil
+		switch typeStr {
+		case "len":
+			low, err := strconv.Atoi(lh[0])
+			if err != nil {
+				return err
+			}
+			if t.(int) >= low {
+				return nil
+			}
+		case "num":
+			low, err := strconv.ParseInt(lh[0], 10, 64)
+			if err != nil {
+				return err
+			}
+			if t.(int64) >= low {
+				return nil
+			}
+		case "float":
+			low, err := strconv.ParseFloat(lh[0], 64)
+			if err != nil {
+				return err
+			}
+			if t.(float64) >= low {
+				return nil
+			}
 		}
 	}
 
