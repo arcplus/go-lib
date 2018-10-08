@@ -81,6 +81,12 @@ func New(moduleName ...string) Micro {
 		})
 	}
 
+	if gitCommit != "" {
+		log.SetAttachment(map[string]string{
+			"version": version + "_" + gitCommit + "_" + buildDate,
+		})
+	}
+
 	if rds, key := os.Getenv("log_rds"), os.Getenv("log_key"); rds != "" && key != "" {
 		level := log.InfoLevel
 		if os.Getenv("log_level") == "debug" {
