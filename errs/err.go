@@ -13,13 +13,13 @@ type ErrCode = Code
 
 // Deprecated using CodeXXX instead
 const (
-	ErrOK         Code = 0
-	ErrInternal   Code = 1000
-	ErrBadRequest Code = 1400
-	ErrUnAuth     Code = 1401 // miss token
-	ErrForbidden  Code = 1403
-	ErrNotFound   Code = 1404
-	ErrConflict   Code = 1409 // conflict error
+	ErrOK         = CodeOK
+	ErrInternal   = CodeInternal
+	ErrBadRequest = CodeBadRequest
+	ErrUnAuth     = CodeUnAuth // miss token
+	ErrForbidden  = CodeForbidden
+	ErrNotFound   = CodeNotFound
+	ErrConflict   = CodeConflict // conflict error
 )
 
 const (
@@ -29,6 +29,7 @@ const (
 	CodeUnAuth     Code = 1401 // miss token
 	CodeForbidden  Code = 1403
 	CodeNotFound   Code = 1404
+	CodeNotAllowed Code = 1405
 	CodeConflict   Code = 1409 // conflict error
 )
 
