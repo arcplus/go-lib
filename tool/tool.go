@@ -13,6 +13,7 @@ import (
 
 var jbm = &jsonpb.Marshaler{
 	EmitDefaults: true,
+	OrigName:     true,
 }
 
 // MarshalProto convert proto to bytes without error

@@ -1,0 +1,13 @@
+// protoc -I=. --go_out=plugins=grpc:. *.proto
+
+syntax = "proto3";
+
+package pb;
+
+message test_proto {
+    string  id = 1;
+    string  name = 2;
+    int64   age = 3;
+    string  next_id = 4;
+    map<string,string> filter = 5;
+}
