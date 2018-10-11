@@ -32,12 +32,18 @@ var jbu = &jsonpb.Unmarshaler{
 func UnmarshalProto(in interface{}, pb proto.Message) error {
 	var reader io.Reader
 	switch t := in.(type) {
-	case io.Reader:
-		reader = t
 	case []byte:
+		if len(t) == 0 {
+			t = []byte("null")
+		}
 		reader = bytes.NewBuffer(t)
 	case string:
+		if t == "" {
+			t = "null"
+		}
 		reader = bytes.NewBufferString(t)
+	case io.Reader:
+		reader = t
 	default:
 		return errs.New(errs.CodeInternal, "in should be io.Reader or bytes")
 	}

@@ -8,7 +8,11 @@ import (
 )
 
 func TestMarshalProto(t *testing.T) {
-	tp := &pb.TestProto{
+	var tp *pb.TestProto
+	data := MarshalProto(tp)
+	t.Log((data))
+
+	tp = &pb.TestProto{
 		Id:     "uuid",
 		Name:   "elvizlai",
 		Age:    18,
@@ -17,7 +21,7 @@ func TestMarshalProto(t *testing.T) {
 			"k1": "v1",
 		},
 	}
-	data := MarshalProto(tp)
+	data = MarshalProto(tp)
 	t.Log(string(data))
 }
 
@@ -31,5 +35,10 @@ func TestUnmarshalProto(t *testing.T) {
 
 	buff := bytes.NewBuffer([]byte(dataStr))
 	err = UnmarshalProto(buff, tp)
+	t.Log(err, tp)
+
+	tp.Reset()
+
+	err = UnmarshalProto([]byte{}, tp)
 	t.Log(err, tp)
 }
