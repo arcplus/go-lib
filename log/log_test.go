@@ -9,11 +9,6 @@ import (
 	"github.com/rs/zerolog/log"
 )
 
-func TestSetAttachment(t *testing.T) {
-	SetAttachment(map[string]string{"a1": "1", "a2": "2"})
-	Debug("hello")
-}
-
 func TestBasic(t *testing.T) {
 	Debug("msg debug")
 	Debugf("msg debug %s", "format")
@@ -23,6 +18,23 @@ func TestBasic(t *testing.T) {
 	Warnf("msg warn %s", "format")
 	Error("msg error")
 	Errorf("msg error %s", "format")
+}
+
+func TestSetAttachment(t *testing.T) {
+	SetAttachment(map[string]string{"a1": "1", "a2": "2"})
+	Debug("hello")
+}
+
+func TestEnabled(t *testing.T) {
+	if !DebugEnabled() {
+		t.Fatalf("debug level should be enabled.")
+	}
+
+	SetLevel(InfoLevel)
+
+	if DebugEnabled() {
+		t.Fatalf("debug should not be enabled.")
+	}
 }
 
 func TestKV(t *testing.T) {

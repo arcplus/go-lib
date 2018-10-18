@@ -23,8 +23,8 @@ type BasicSampler = zerolog.BasicSampler
 // Level
 const (
 	DebugLevel = zerolog.DebugLevel
-	WarnLevel  = zerolog.WarnLevel
 	InfoLevel  = zerolog.InfoLevel
+	WarnLevel  = zerolog.WarnLevel
 	ErrorLevel = zerolog.ErrorLevel
 	FatalLevel = zerolog.FatalLevel
 	Disabled   = zerolog.Disabled
@@ -32,20 +32,20 @@ const (
 
 // Log struct.
 type Log struct {
+	mu           *sync.RWMutex
+	zl           *zerolog.Logger
+	sampler      zerolog.Sampler
 	depth        int
 	callerEnable bool
 	stackEnable  bool
-	mu           *sync.RWMutex
 	kv           []string
-	zl           *zerolog.Logger
-	sampler      zerolog.Sampler
 }
 
 var zl = zerolog.New(zerolog.ConsoleWriter{Out: os.Stdout}).With().Timestamp().Logger()
 
 var logger = Log{
-	zl: &zl,
 	mu: &sync.RWMutex{},
+	zl: &zl,
 }
 
 // prefixSize is used internally to trim the user specific path from the
@@ -121,6 +121,10 @@ func Debugf(format string, v ...interface{}) {
 	l := logger
 	l.depth++
 	l.Debugf(format, v...)
+}
+
+func DebugEnabled() bool {
+	return zl.Debug().Enabled()
 }
 
 func Info(v string) {
