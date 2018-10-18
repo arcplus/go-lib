@@ -12,6 +12,8 @@ import (
 	"github.com/jmoiron/sqlx"
 )
 
+type NullTime = mysql.NullTime
+
 var sqlPool = &struct {
 	sync.RWMutex
 	clients map[string]*Conf
