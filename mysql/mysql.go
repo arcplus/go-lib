@@ -45,8 +45,8 @@ func Register(name string, conf Conf) error {
 		return err
 	}
 
-	if os.Getenv("mysql-hook") == "on" {
-		sql.Register("mysql-hook", sqlhooks.Wrap(&mysql.MySQLDriver{}, &Hooks{}))
+	if os.Getenv("mysql_hook") == "on" {
+		sql.Register("mysql_hook", sqlhooks.Wrap(&mysql.MySQLDriver{}, &Hooks{}))
 	}
 
 	db, err := sqlx.Open("mysql", conf.DSN)
