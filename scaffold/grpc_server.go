@@ -8,7 +8,6 @@ import (
 	"github.com/arcplus/go-lib/log"
 	"github.com/arcplus/go-lib/scaffold/internal"
 	"github.com/arcplus/go-lib/tool"
-
 	"github.com/golang/protobuf/ptypes"
 	"github.com/golang/protobuf/ptypes/any"
 	spb "google.golang.org/genproto/googleapis/rpc/status"
@@ -26,6 +25,8 @@ func ServerErrorConvertor(ctx context.Context, req interface{}, info *grpc.Unary
 			tid = t[0]
 		}
 	}
+
+	ctx = context.WithValue(ctx, "x-request-id", tid)
 
 	logger := log.Trace(tid)
 
