@@ -40,18 +40,18 @@ func Register(name string, conf Conf) error {
 	defer sqlPool.Unlock()
 
 	// check if DSN is valid
-	_, err := mysql.ParseDSN(conf.DSN)
+	cfg, err := mysql.ParseDSN(conf.DSN)
 	if err != nil {
 		return err
 	}
 
 	var db *sqlx.DB
 
-	if os.Getenv("mysql_hook") == "on" {
-		sql.Register("mysql_hook", sqlhooks.Wrap(&mysql.MySQLDriver{}, &Hooks{}))
-		db, err = sqlx.Open("mysql_hook", conf.DSN)
+	if os.Getenv("mysql_hook_off") == "true" {
+		db, err = sqlx.Open("mysql", cfg.FormatDSN())
 	} else {
-		db, err = sqlx.Open("mysql", conf.DSN)
+		sql.Register("mysql_hook", sqlhooks.Wrap(&mysql.MySQLDriver{}, &Hooks{}))
+		db, err = sqlx.Open("mysql_hook", cfg.FormatDSN())
 	}
 
 	if err != nil {
@@ -75,10 +75,9 @@ func Register(name string, conf Conf) error {
 
 	// using snakecase default
 	if conf.MapperFunc == nil {
-		db.MapperFunc(snakecase)
-	} else {
-		db.MapperFunc(conf.MapperFunc)
+		conf.MapperFunc = snakecase
 	}
+	db.MapperFunc(conf.MapperFunc)
 
 	conf.db = db
 
