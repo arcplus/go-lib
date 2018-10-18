@@ -1,11 +1,13 @@
 package mysql
 
 import (
+	"database/sql"
 	"fmt"
+	"os"
 	"sync"
 	"time"
 
-	// mysql driver
+	"github.com/gchaincl/sqlhooks"
 	"github.com/go-sql-driver/mysql"
 	"github.com/jmoiron/sqlx"
 )
@@ -41,6 +43,10 @@ func Register(name string, conf Conf) error {
 	_, err := mysql.ParseDSN(conf.DSN)
 	if err != nil {
 		return err
+	}
+
+	if os.Getenv("mysql-hook") == "on" {
+		sql.Register("mysql-hook", sqlhooks.Wrap(&mysql.MySQLDriver{}, &Hooks{}))
 	}
 
 	db, err := sqlx.Open("mysql", conf.DSN)
