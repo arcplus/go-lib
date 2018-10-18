@@ -87,12 +87,18 @@ func New(moduleName ...string) Micro {
 		})
 	}
 
-	if rds, key := os.Getenv("log_rds"), os.Getenv("log_key"); rds != "" && key != "" {
-		level := log.InfoLevel
-		if os.Getenv("log_level") == "debug" {
-			level = log.DebugLevel
-		}
+	level := log.DebugLevel
+	switch os.Getenv("log_level") {
+	case "info":
+		level = log.InfoLevel
+	case "warn":
+		level = log.WarnLevel
+	case "error":
+		level = log.ErrorLevel
+	}
+	log.SetLevel(level)
 
+	if rds, key := os.Getenv("log_rds"), os.Getenv("log_key"); rds != "" && key != "" {
 		log.SetOutput(log.RedisWriter(log.RedisConfig{
 			Level:  level,
 			DSN:    rds,
