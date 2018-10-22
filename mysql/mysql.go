@@ -12,7 +12,16 @@ import (
 	"github.com/jmoiron/sqlx"
 )
 
-type NullTime = mysql.NullTime
+var defaultDB = "db"
+
+// alias
+type (
+	NullBool    = sql.NullBool
+	NullInt64   = sql.NullInt64
+	NullFloat64 = sql.NullFloat64
+	NullString  = sql.NullString
+	NullTime    = mysql.NullTime
+)
 
 var sqlPool = &struct {
 	sync.RWMutex
@@ -35,11 +44,8 @@ type Conf struct {
 // each db should only register once
 func Register(name string, conf Conf) error {
 	if name == "" {
-		name = "db"
+		name = defaultDB
 	}
-
-	sqlPool.Lock()
-	defer sqlPool.Unlock()
 
 	// check if DSN is valid
 	cfg, err := mysql.ParseDSN(conf.DSN)
@@ -83,12 +89,14 @@ func Register(name string, conf Conf) error {
 
 	conf.db = db
 
+	sqlPool.Lock()
 	sqlPool.clients[name] = &conf
+	sqlPool.Unlock()
 
 	return nil
 }
 
-// Client returns mysql client
+// Client returns mysql client, mostly, we use DB() func
 func Client(name string) (*sqlx.DB, error) {
 	sqlPool.RLock()
 
@@ -102,18 +110,11 @@ func Client(name string) (*sqlx.DB, error) {
 	return nil, fmt.Errorf("db %q not registered", name)
 }
 
-// Deprecated, using DB() instead.
-// Get return mysql client with given name or nil if not exist
-func Get(name string) *sqlx.DB {
-	cli, _ := Client(name)
-	return cli
-}
-
-// DB is helper func returns default db
+// DB is helper func to get *sqlx.DB
 func DB(name ...string) *sqlx.DB {
 	var cli *sqlx.DB
 	if len(name) == 0 {
-		cli, _ = Client("db")
+		cli, _ = Client(defaultDB)
 	} else {
 		cli, _ = Client(name[0])
 	}
@@ -158,22 +159,4 @@ func Close() error {
 		return fmt.Errorf("%v", errs)
 	}
 	return nil
-}
-
-// MySQLErr try conver mysql err to *mysql.MySQLError
-func MySQLErr(err error) *mysql.MySQLError {
-	if err == nil {
-		return nil
-	}
-	if e, ok := err.(*mysql.MySQLError); ok {
-		return e
-	}
-	return nil
-}
-
-// IsDupErr check if mysql error is ER_DUP_ENTRY
-// https://github.com/VividCortex/mysqlerr
-func IsDupErr(err error) bool {
-	e := MySQLErr(err)
-	return e != nil && e.Number == 1062
 }
