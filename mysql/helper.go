@@ -1,6 +1,22 @@
 package mysql
 
-import "github.com/go-sql-driver/mysql"
+import (
+	"github.com/go-sql-driver/mysql"
+	"github.com/jmoiron/sqlx"
+)
+
+var (
+	In                = sqlx.In
+	Get               = sqlx.Get
+	GetContext        = sqlx.GetContext
+	Select            = sqlx.Select
+	SelectContext     = sqlx.SelectContext
+	Named             = sqlx.Named
+	NamedExec         = sqlx.NamedExec
+	NamedExecContext  = sqlx.NamedExecContext
+	NamedQuery        = sqlx.NamedQuery
+	NamedQueryContext = sqlx.NamedQueryContext
+)
 
 // MySQLErr try conver mysql err to *mysql.MySQLError
 func MySQLErr(err error) *mysql.MySQLError {
