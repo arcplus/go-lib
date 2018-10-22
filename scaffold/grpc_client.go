@@ -5,7 +5,6 @@ import (
 
 	"github.com/arcplus/go-lib/errs"
 	"github.com/arcplus/go-lib/scaffold/internal"
-
 	"github.com/golang/protobuf/ptypes"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/status"

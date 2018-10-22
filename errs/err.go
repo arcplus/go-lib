@@ -1,9 +1,10 @@
 package errs
 
 import (
-	"encoding/json"
 	"fmt"
 	"runtime"
+
+	"github.com/arcplus/go-lib/json"
 )
 
 type Code uint32

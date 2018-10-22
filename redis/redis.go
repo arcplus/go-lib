@@ -1,11 +1,11 @@
 package redis
 
 import (
-	"encoding/json"
 	"fmt"
 	"sync"
 	"time"
 
+	"github.com/arcplus/go-lib/json"
 	"github.com/go-redis/redis"
 )
 

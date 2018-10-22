@@ -1,9 +1,10 @@
 package errs
 
 import (
-	"encoding/json"
 	"errors"
 	"testing"
+
+	"github.com/arcplus/go-lib/json"
 )
 
 var errGo = errors.New("go error")

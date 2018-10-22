@@ -2,11 +2,10 @@ package tool
 
 import (
 	"bytes"
-	"encoding/json"
 	"io"
 
 	"github.com/arcplus/go-lib/errs"
-
+	"github.com/arcplus/go-lib/json"
 	"github.com/golang/protobuf/jsonpb"
 	"github.com/golang/protobuf/proto"
 )
