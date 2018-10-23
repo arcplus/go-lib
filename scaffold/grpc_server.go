@@ -81,7 +81,7 @@ func ServerErrorConvertor(ctx context.Context, req interface{}, info *grpc.Unary
 
 	if err != nil && code < 1400 {
 		logger.Error(buf.String())
-	} else {
+	} else if logger.DebugEnabled() {
 		logger.Debug(buf.String())
 	}
 

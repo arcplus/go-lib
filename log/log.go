@@ -197,6 +197,14 @@ func (l Log) KV(k string, v interface{}) Log {
 	return l
 }
 
+func KVPair(kv map[string]interface{}) Log {
+	l := logger
+	for k, v := range kv {
+		l.kv = append(l.kv, k, v)
+	}
+	return l
+}
+
 // SetKV change kv slice
 func (l *Log) SetKV(k string, v interface{}) Log {
 	l.mu.Lock()
@@ -216,11 +224,14 @@ func (l Log) Trace(v string) Log {
 	return l
 }
 
-func KVPair(kv map[string]interface{}) Log {
+func Caller() Log {
 	l := logger
-	for k, v := range kv {
-		l.kv = append(l.kv, k, v)
-	}
+	l.callerEnable = true
+	return l
+}
+
+func (l Log) Caller() Log {
+	l.callerEnable = true
 	return l
 }
 
@@ -233,21 +244,6 @@ func WithStack() Log {
 func (l Log) WithStack() Log {
 	l.stackEnable = true
 	return l
-}
-
-func Caller() Log {
-	l := logger
-	l.callerEnable = true
-	return l
-}
-
-func (l Log) Caller() Log {
-	l.callerEnable = true
-	return l
-}
-
-type Context struct {
-	logger *Log
 }
 
 func Sample(sampler Sampler) Log {
@@ -265,6 +261,10 @@ func Skip(n int) Log {
 func (l Log) Skip(n int) Log {
 	l.depth += n
 	return l
+}
+
+func (l Log) DebugEnabled() bool {
+	return l.zl.Debug().Enabled()
 }
 
 func (l Log) Debug(v string) {

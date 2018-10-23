@@ -38,9 +38,18 @@ func TestEnabled(t *testing.T) {
 		t.Fatalf("debug level should be enabled.")
 	}
 
+	lg := Logger()
+	if !lg.DebugEnabled() {
+		t.Fatalf("debug level should be enabled.")
+	}
+
 	SetLevel(InfoLevel)
 
 	if DebugEnabled() {
+		t.Fatalf("debug should not be enabled.")
+	}
+
+	if lg.DebugEnabled() {
 		t.Fatalf("debug should not be enabled.")
 	}
 }
