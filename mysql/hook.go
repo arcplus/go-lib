@@ -17,17 +17,17 @@ func (h *Hooks) Before(ctx context.Context, query string, args ...interface{}) (
 
 // After hook will get the timestamp registered on the Before hook and print the elapsed time
 func (h *Hooks) After(ctx context.Context, query string, args ...interface{}) (context.Context, error) {
-	begin := ctx.Value("x-sql-begin").(time.Time)
+	td := time.Since(ctx.Value("x-sql-begin").(time.Time))
 
-	logger := log.KVPair(map[string]string{
+	logger := log.KVPair(map[string]interface{}{
 		"hook": "sql",
-		"took": time.Since(begin).String(),
+		"took": td.Nanoseconds() / 1000, // ns->us
 	})
 
 	if tid, ok := ctx.Value("x-request-id").(string); ok {
-		logger = logger.KV("tid", tid)
+		logger = logger.Trace(tid)
 	}
 
-	logger.Debugf("> %s %q", query, args)
+	logger.Debugf("> %s. %q", query, args)
 	return ctx, nil
 }

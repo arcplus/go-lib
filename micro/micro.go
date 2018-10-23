@@ -69,23 +69,21 @@ func New(moduleName ...string) Micro {
 		resCloseFuncs: list.New(),
 	}
 
+	kv := map[string]interface{}{}
+
 	if len(moduleName) != 0 {
-		log.SetAttachment(map[string]string{
-			"module": moduleName[0],
-		})
+		kv["module"] = moduleName[0]
 	}
 
 	if mode != "" {
-		log.SetAttachment(map[string]string{
-			"mode": mode,
-		})
+		kv["mode"] = mode
 	}
 
 	if gitCommit != "" {
-		log.SetAttachment(map[string]string{
-			"version": version + "_" + gitCommit + "_" + buildDate,
-		})
+		kv["version"] = version + "_" + gitCommit + "_" + buildDate
 	}
+
+	log.SetAttachment(kv)
 
 	level := log.DebugLevel
 	switch os.Getenv("log_level") {

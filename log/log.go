@@ -38,7 +38,7 @@ type Log struct {
 	depth        int
 	callerEnable bool
 	stackEnable  bool
-	kv           []string
+	kv           []interface{} // must be even len
 }
 
 var zl = zerolog.New(zerolog.ConsoleWriter{Out: os.Stdout}).With().Timestamp().Logger()
@@ -71,7 +71,7 @@ func init() {
 // Logger return copy of default logger
 func Logger() Log {
 	l := logger
-	l.kv = make([]string, 0, 8)
+	l.kv = make([]interface{}, 0, 8)
 	return l
 }
 
@@ -100,13 +100,24 @@ func SetCallDepth(n int) {
 }
 
 // SetAttachment add global kv to logger
-func SetAttachment(kv map[string]string) {
+func SetAttachment(kv map[string]interface{}) {
 	if len(kv) == 0 {
 		return
 	}
 	ctx := zl.With()
 	for k, v := range kv {
-		ctx = ctx.Str(k, v)
+		switch vv := v.(type) {
+		case string:
+			ctx = ctx.Str(k, vv)
+		case float64:
+			ctx = ctx.Float64(k, vv)
+		case int64:
+			ctx = ctx.Int64(k, vv)
+		case int:
+			ctx = ctx.Int(k, vv)
+		default:
+			ctx = ctx.Interface(k, vv)
+		}
 	}
 	zl = ctx.Logger()
 }
@@ -175,19 +186,19 @@ func Fatalf(format string, v ...interface{}) {
 	l.Fatalf(format, v...)
 }
 
-func KV(k string, v string) Log {
+func KV(k string, v interface{}) Log {
 	l := logger
 	l.kv = append(l.kv, k, v)
 	return l
 }
 
-func (l Log) KV(k string, v string) Log {
+func (l Log) KV(k string, v interface{}) Log {
 	l.kv = append(l.kv, k, v)
 	return l
 }
 
 // SetKV change kv slice
-func (l *Log) SetKV(k string, v string) Log {
+func (l *Log) SetKV(k string, v interface{}) Log {
 	l.mu.Lock()
 	l.kv = append(l.kv, k, v)
 	l.mu.Unlock()
@@ -205,7 +216,7 @@ func (l Log) Trace(v string) Log {
 	return l
 }
 
-func KVPair(kv map[string]string) Log {
+func KVPair(kv map[string]interface{}) Log {
 	l := logger
 	for k, v := range kv {
 		l.kv = append(l.kv, k, v)
@@ -309,23 +320,34 @@ func (l Log) levelLog(lv Level, format string, v ...interface{}) {
 		evt = s.WithLevel(lv)
 	}
 
-	if len(l.kv) != 0 {
-		for i, ln := 0, len(l.kv); i < ln; i = i + 2 {
-			evt.Str(l.kv[i], l.kv[i+1])
+	for i, ln := 0, len(l.kv); i < ln; i = i + 2 {
+		switch vv := l.kv[i+1].(type) {
+		case string:
+			evt.Str(l.kv[i].(string), vv)
+		case float64:
+			evt.Float64(l.kv[i].(string), vv)
+		case int64:
+			evt.Int64(l.kv[i].(string), vv)
+		case int:
+			evt.Int(l.kv[i].(string), vv)
+		default:
+			evt.Interface(l.kv[i].(string), l.kv[i+1])
 		}
 	}
 
 	if l.callerEnable {
-		_, file, line, _ := runtime.Caller(depth + l.depth)
-		if prefixSize != 0 && len(file) > prefixSize {
-			file = file[prefixSize:]
+		_, file, line, ok := runtime.Caller(depth + l.depth)
+		if ok {
+			if prefixSize != 0 && len(file) > prefixSize {
+				file = file[prefixSize:]
+			}
+			file += ":" + strconv.Itoa(line)
+			evt.Str("caller", file)
 		}
-		file += ":" + strconv.FormatInt(int64(line), 10)
-		evt.Str("caller", file)
 	}
 
 	if l.stackEnable {
-		evt.Str("stack", TakeStacktrace(depth+l.depth))
+		evt.Str("stack", TakeStacktrace(l.depth))
 	}
 
 	evt.Msgf(format, v...)
@@ -397,7 +419,12 @@ func TakeStacktrace(optionalSkip ...int) string {
 		buff.AppendString(frame.Function)
 		buff.AppendByte('\n')
 		buff.AppendByte('\t')
+
+		if prefixSize != 0 && len(frame.File) > prefixSize {
+			frame.File = frame.File[prefixSize:]
+		}
 		buff.AppendString(frame.File)
+
 		buff.AppendByte(':')
 		buff.AppendInt(int64(frame.Line))
 	}

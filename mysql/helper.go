@@ -1,6 +1,8 @@
 package mysql
 
 import (
+	"database/sql"
+
 	"github.com/go-sql-driver/mysql"
 	"github.com/jmoiron/sqlx"
 )
@@ -29,9 +31,18 @@ func MySQLErr(err error) *mysql.MySQLError {
 	return nil
 }
 
+// IsNoRowsErr
+func IsNoRowsErr(err error) bool {
+	return err == sql.ErrNoRows
+}
+
+const (
+	ER_DUP_ENTRY = 1062
+)
+
 // IsDupErr check if mysql error is ER_DUP_ENTRY
 // https://github.com/VividCortex/mysqlerr
 func IsDupErr(err error) bool {
 	e := MySQLErr(err)
-	return e != nil && e.Number == 1062
+	return e != nil && e.Number == ER_DUP_ENTRY
 }
