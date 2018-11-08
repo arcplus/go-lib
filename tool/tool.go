@@ -3,11 +3,14 @@ package tool
 import (
 	"bytes"
 	"io"
+	"reflect"
 
 	"github.com/arcplus/go-lib/errs"
 	"github.com/arcplus/go-lib/json"
 	"github.com/golang/protobuf/jsonpb"
 	"github.com/golang/protobuf/proto"
+	"github.com/golang/protobuf/ptypes"
+	"github.com/golang/protobuf/ptypes/any"
 )
 
 var jbm = &jsonpb.Marshaler{
@@ -85,5 +88,25 @@ func MarshalToString(v interface{}, withIndent ...bool) string {
 			return err.Error()
 		}
 		return string(data)
+	}
+}
+
+// ProtoToAnyX convert []proto.Message to []*any.Any
+func ProtoToAnyX(p interface{}) []*any.Any {
+	rv := reflect.ValueOf(p)
+
+	switch rv.Kind() {
+	case reflect.Slice:
+		l := rv.Len()
+		as := make([]*any.Any, l)
+		for i := 0; i < l; i++ {
+			pm, ok := rv.Index(i).Interface().(proto.Message)
+			if ok {
+				as[i], _ = ptypes.MarshalAny(pm)
+			}
+		}
+		return as
+	default:
+		return nil
 	}
 }

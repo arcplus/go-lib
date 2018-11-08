@@ -5,6 +5,7 @@ import (
 	"testing"
 
 	"github.com/arcplus/go-lib/internal/pb"
+	"github.com/golang/protobuf/proto"
 )
 
 func TestMarshalProto(t *testing.T) {
@@ -41,4 +42,14 @@ func TestUnmarshalProto(t *testing.T) {
 
 	err = UnmarshalProto([]byte{}, tp)
 	t.Log(err, tp)
+}
+
+func TestProtoToAnyX(t *testing.T) {
+	list := make([]proto.Message, 3)
+
+	list[1] = &pb.TestProto{}
+
+	as := ProtoToAnyX(list)
+
+	t.Log(as)
 }
