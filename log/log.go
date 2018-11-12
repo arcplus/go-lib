@@ -55,7 +55,7 @@ var prefixSize int
 func init() {
 	zerolog.MessageFieldName = "msg"
 	zerolog.TimestampFieldName = "ts"
-	zerolog.TimeFieldFormat = ""
+	zerolog.TimeFieldFormat = "2006-01-02 15:04:05"
 
 	_, file, _, ok := runtime.Caller(0)
 	if file == "?" {
