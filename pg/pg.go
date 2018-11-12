@@ -1,4 +1,4 @@
-package mysql
+package pg
 
 import (
 	"database/sql"
@@ -7,24 +7,15 @@ import (
 
 	"github.com/arcplus/go-lib/internal/sqli"
 	"github.com/gchaincl/sqlhooks"
-	"github.com/go-sql-driver/mysql"
 	"github.com/jmoiron/sqlx"
+	"github.com/lib/pq"
 )
 
-const driverName = "mysql"
+const driverName = "postgres"
 
 func init() {
-	sql.Register(driverName+sqli.HookSuffix, sqlhooks.Wrap(&mysql.MySQLDriver{}, &sqli.Hook{}))
+	sql.Register(driverName+sqli.HookSuffix, sqlhooks.Wrap(&pq.Driver{}, &sqli.Hook{}))
 }
-
-// alias
-type (
-	NullBool    = sql.NullBool
-	NullInt64   = sql.NullInt64
-	NullFloat64 = sql.NullFloat64
-	NullString  = sql.NullString
-	NullTime    = mysql.NullTime
-)
 
 var pool = &struct {
 	sync.RWMutex
@@ -35,8 +26,6 @@ var pool = &struct {
 
 type Conf = sqli.Conf
 
-// Register dsn format -> [username[:password]@][protocol[(address)]]/dbname[?param1=value1&...&paramN=valueN]
-// each db should only register once
 func Register(name string, conf Conf) {
 	if name == "" {
 		name = sqli.DefaultDBName
@@ -49,7 +38,7 @@ func Register(name string, conf Conf) {
 	pool.Unlock()
 }
 
-// Client returns mysql client, mostly, we use DB() func
+// Client returns client, mostly, we use DB() func
 func Client(name string) (*sqlx.DB, error) {
 	pool.RLock()
 
