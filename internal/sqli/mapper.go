@@ -1,4 +1,4 @@
-package mysql
+package sqli
 
 func snakecase(s string) string {
 	b := make([]byte, 0, 64)
