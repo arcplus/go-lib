@@ -2,6 +2,7 @@ package sqli
 
 import (
 	"context"
+	"database/sql/driver"
 	"time"
 
 	"github.com/arcplus/go-lib/log"
@@ -34,6 +35,10 @@ func (h *Hook) After(ctx context.Context, query string, args ...interface{}) (co
 
 // TODO check
 func (h *Hook) OnError(ctx context.Context, err error, query string, args ...interface{}) error {
+	if err == driver.ErrSkip {
+		return nil
+	}
+
 	td := time.Since(ctx.Value("x-sql-begin").(time.Time))
 
 	logger := log.KVPair(map[string]interface{}{
