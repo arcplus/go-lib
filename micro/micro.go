@@ -5,6 +5,7 @@ import (
 	"container/list"
 	"context"
 	"fmt"
+	"io"
 	"net"
 	"net/http"
 	"os"
@@ -16,6 +17,7 @@ import (
 	"time"
 
 	"github.com/arcplus/go-lib/log"
+	"github.com/rs/zerolog"
 )
 
 // go build -ldflags -X
@@ -96,13 +98,23 @@ func New(moduleName ...string) Micro {
 	}
 	log.SetLevel(level)
 
+	ws := []io.Writer{}
+
+	if os.Getenv("log_std") == "" {
+		ws = append(ws, zerolog.ConsoleWriter{Out: os.Stdout})
+	}
+
 	if rds, key := os.Getenv("log_rds"), os.Getenv("log_key"); rds != "" && key != "" {
-		log.SetOutput(log.RedisWriter(log.RedisConfig{
+		ws = append(ws, log.RedisWriter(log.RedisConfig{
 			Level:  level,
 			DSN:    rds,
 			LogKey: key,
 			Async:  true,
 		}))
+	}
+
+	if len(ws) != 0 {
+		log.SetOutput(ws...)
 	}
 
 	m.AddResCloseFunc(log.Close)
@@ -224,13 +236,15 @@ func (m *micro) Start() {
 		go m.serveFuncs[i]()
 	}
 
+	log.Info("micro start")
+
 	ch := make(chan os.Signal, 1)
 	signal.Notify(ch, WatchSignal...)
 	select {
 	case s := <-ch:
-		log.Skip(1).Infof("receive stop signal: %s", s)
+		log.Skip(1).Infof("micro receive stop signal: %s", s)
 	case e := <-m.errChan:
-		log.Skip(1).Errorf("receive err signal: %s", e)
+		log.Skip(1).Errorf("micro receive err signal: %s", e)
 	}
 }
 
