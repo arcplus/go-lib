@@ -3,6 +3,8 @@ package mysql
 import (
 	"database/sql"
 
+	"github.com/arcplus/go-lib/errs"
+
 	"github.com/go-sql-driver/mysql"
 	"github.com/jmoiron/sqlx"
 )
@@ -45,4 +47,22 @@ const (
 func IsDupErr(err error) bool {
 	e := MySQLErr(err)
 	return e != nil && e.Number == ER_DUP_ENTRY
+}
+
+// IsChanged checks if result.RowsAffected is 0
+func IsChanged(result sql.Result, err error) error {
+	if err != nil {
+		return err
+	}
+
+	aff, err := result.RowsAffected()
+	if err != nil {
+		return err
+	}
+
+	if aff == 0 {
+		return errs.New(errs.CodeNotFound, "RowsAffected is 0")
+	}
+
+	return nil
 }
