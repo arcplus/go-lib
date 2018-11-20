@@ -5,10 +5,11 @@ import (
 	"fmt"
 	"sync"
 
-	"github.com/arcplus/go-lib/internal/sqli"
 	"github.com/gchaincl/sqlhooks"
 	"github.com/jmoiron/sqlx"
 	"github.com/lib/pq"
+
+	"github.com/arcplus/go-lib/internal/sqli"
 )
 
 const driverName = "postgres"

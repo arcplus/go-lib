@@ -3,11 +3,12 @@ package scaffold
 import (
 	"context"
 
-	"github.com/arcplus/go-lib/errs"
-	"github.com/arcplus/go-lib/scaffold/internal"
 	"github.com/golang/protobuf/ptypes"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/status"
+
+	"github.com/arcplus/go-lib/errs"
+	"github.com/arcplus/go-lib/scaffold/internal"
 )
 
 func ClientErrorConvertor(ctx context.Context, method string, req, reply interface{}, cc *grpc.ClientConn, invoker grpc.UnaryInvoker, opts ...grpc.CallOption) error {

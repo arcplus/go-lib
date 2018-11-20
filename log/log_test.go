@@ -138,7 +138,7 @@ func TestLog2Redis(t *testing.T) {
 		LogKey: "log:test",
 		Level:  InfoLevel,
 		Async:  true,
-	}), ConsoleAsync)
+	}), ConsoleWriter(ConsoleConfig{}))
 	Debug("hidden")
 	Info("hello info")
 	Error("hello error")

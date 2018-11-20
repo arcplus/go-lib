@@ -5,12 +5,13 @@ import (
 	"io"
 	"reflect"
 
-	"github.com/arcplus/go-lib/errs"
-	"github.com/arcplus/go-lib/json"
 	"github.com/golang/protobuf/jsonpb"
 	"github.com/golang/protobuf/proto"
 	"github.com/golang/protobuf/ptypes"
 	"github.com/golang/protobuf/ptypes/any"
+
+	"github.com/arcplus/go-lib/errs"
+	"github.com/arcplus/go-lib/json"
 )
 
 var jbm = &jsonpb.Marshaler{

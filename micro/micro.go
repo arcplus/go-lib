@@ -17,7 +17,6 @@ import (
 	"time"
 
 	"github.com/arcplus/go-lib/log"
-	"github.com/rs/zerolog"
 )
 
 // go build -ldflags -X
@@ -87,29 +86,27 @@ func New(moduleName ...string) Micro {
 
 	log.SetAttachment(kv)
 
-	level := log.DebugLevel
-	switch os.Getenv("log_level") {
-	case "info":
-		level = log.InfoLevel
-	case "warn":
-		level = log.WarnLevel
-	case "error":
-		level = log.ErrorLevel
-	}
+	level := getLogLevel(os.Getenv("log_level"))
 	log.SetLevel(level)
 
 	ws := []io.Writer{}
 
-	if os.Getenv("log_std") == "" {
-		ws = append(ws, zerolog.ConsoleWriter{Out: os.Stdout})
+	async := os.Getenv("log_sync") == "true"
+
+	if os.Getenv("log_std_disable") != "true" {
+		ws = append(ws, log.ConsoleWriter(
+			log.ConsoleConfig{
+				Async: async,
+			},
+		))
 	}
 
-	if rds, key := os.Getenv("log_rds"), os.Getenv("log_key"); rds != "" && key != "" {
+	if rds, key := os.Getenv("log_rds_dsn"), os.Getenv("log_rds_key"); rds != "" && key != "" {
 		ws = append(ws, log.RedisWriter(log.RedisConfig{
-			Level:  level,
+			Level:  getLogLevel(os.Getenv("log_rds_level")),
 			DSN:    rds,
 			LogKey: key,
-			Async:  true,
+			Async:  async,
 		}))
 	}
 
@@ -270,4 +267,17 @@ func Bind(port string, envName ...string) string {
 	}
 
 	return port
+}
+
+func getLogLevel(str string) log.Level {
+	switch str {
+	case "info":
+		return log.InfoLevel
+	case "warn":
+		return log.WarnLevel
+	case "error":
+		return log.ErrorLevel
+	default:
+		return log.DebugLevel
+	}
 }

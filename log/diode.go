@@ -8,7 +8,7 @@ import (
 	"sync"
 	"time"
 
-	diodes "code.cloudfoundry.org/go-diodes"
+	"code.cloudfoundry.org/go-diodes"
 	"github.com/rs/zerolog"
 )
 
@@ -31,7 +31,7 @@ type Writer struct {
 	done chan struct{}
 }
 
-// NewWriter creates a writer wrapping w with a many-to-one diode in order to
+// NewAsyncWriter creates a writer wrapping w with a many-to-one diode in order to
 // never block log producers and drop events if the writer can't keep up with
 // the flow of data.
 //
@@ -44,7 +44,7 @@ type Writer struct {
 //
 //
 // See code.cloudfoundry.org/go-diodes for more info on diode.
-func NewWriter(lv Level, w io.Writer, size int, poolInterval time.Duration, f Alerter) Writer {
+func NewAsyncWriter(lv Level, w io.Writer, size int, poolInterval time.Duration, f Alerter) Writer {
 	ctx, cancel := context.WithCancel(context.Background())
 	d := diodes.NewManyToOne(size, diodes.AlertFunc(f))
 	dw := Writer{
@@ -101,7 +101,22 @@ func (dw Writer) poll() {
 	}
 }
 
-// ConsoleAsync warps zerolog.ConsoleWriter with diode
-var ConsoleAsync = NewWriter(0, zerolog.ConsoleWriter{Out: os.Stdout}, 1000, 10*time.Millisecond, func(missed int) {
-	log.Printf("Logger Dropped %d messages", missed)
-})
+// ConsoleConfig is conf for redis writer.
+type ConsoleConfig struct {
+	Async bool
+}
+
+func ConsoleWriter(conf ConsoleConfig) io.Writer {
+	if conf.Async {
+		wr := NewAsyncWriter(0, zerolog.ConsoleWriter{Out: os.Stdout}, 1000, 10*time.Millisecond, func(missed int) {
+			log.Printf("Console Writer dropped %d messages", missed)
+		})
+
+		asyncWaitList = append(asyncWaitList, func() error {
+			return wr.Close()
+		})
+
+		return wr
+	}
+	return zerolog.ConsoleWriter{Out: os.Stdout}
+}

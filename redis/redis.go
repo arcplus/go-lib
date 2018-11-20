@@ -5,8 +5,9 @@ import (
 	"sync"
 	"time"
 
-	"github.com/arcplus/go-lib/json"
 	"github.com/go-redis/redis"
+
+	"github.com/arcplus/go-lib/json"
 )
 
 // Nil reply Redis returns when key does not exist.

@@ -4,10 +4,6 @@ import (
 	"bytes"
 	"context"
 
-	"github.com/arcplus/go-lib/errs"
-	"github.com/arcplus/go-lib/log"
-	"github.com/arcplus/go-lib/scaffold/internal"
-	"github.com/arcplus/go-lib/tool"
 	"github.com/golang/protobuf/ptypes"
 	"github.com/golang/protobuf/ptypes/any"
 	spb "google.golang.org/genproto/googleapis/rpc/status"
@@ -15,6 +11,11 @@ import (
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/metadata"
 	"google.golang.org/grpc/status"
+
+	"github.com/arcplus/go-lib/errs"
+	"github.com/arcplus/go-lib/log"
+	"github.com/arcplus/go-lib/scaffold/internal"
+	"github.com/arcplus/go-lib/tool"
 )
 
 // ServerErrorConvertor convert *Error to gRPC error

@@ -4,8 +4,9 @@ import (
 	"bytes"
 	"testing"
 
-	"github.com/arcplus/go-lib/internal/pb"
 	"github.com/golang/protobuf/proto"
+
+	"github.com/arcplus/go-lib/internal/pb"
 )
 
 func TestMarshalProto(t *testing.T) {

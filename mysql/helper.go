@@ -3,10 +3,10 @@ package mysql
 import (
 	"database/sql"
 
-	"github.com/arcplus/go-lib/errs"
-
 	"github.com/go-sql-driver/mysql"
 	"github.com/jmoiron/sqlx"
+
+	"github.com/arcplus/go-lib/errs"
 )
 
 var (

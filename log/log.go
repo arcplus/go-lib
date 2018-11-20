@@ -8,8 +8,9 @@ import (
 	"strings"
 	"sync"
 
-	"github.com/arcplus/go-lib/pool"
 	"github.com/rs/zerolog"
+
+	"github.com/arcplus/go-lib/pool"
 )
 
 // Level indicate log level.
@@ -351,9 +352,16 @@ func (l Log) levelLog(lv Level, format string, v ...interface{}) {
 	}
 
 	evt.Msgf(format, v...)
+
+	// Close then exit
+	switch lv {
+	case FatalLevel:
+		Close()
+		os.Exit(1)
+	}
 }
 
-var asyncWaitList = []func() error{ConsoleAsync.Close}
+var asyncWaitList = []func() error{}
 
 func Close() error {
 	for i := range asyncWaitList {
