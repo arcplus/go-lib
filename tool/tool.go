@@ -61,7 +61,7 @@ var jbmIndent = &jsonpb.Marshaler{
 // MarshalToString convert proto or struct to json string
 func MarshalToString(v interface{}, withIndent ...bool) string {
 	if v == nil {
-		return "nil"
+		return "null"
 	}
 
 	switch t := v.(type) {
@@ -74,6 +74,10 @@ func MarshalToString(v interface{}, withIndent ...bool) string {
 		}
 		s, err := marshaler.MarshalToString(t)
 		if err != nil {
+			// FIXME: hard code
+			if err.Error() == "Marshal called with nil" {
+				return "null"
+			}
 			return err.Error()
 		}
 		return s
