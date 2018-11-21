@@ -4,6 +4,27 @@ import (
 	"testing"
 )
 
+func Test_reIndent(t *testing.T) {
+	query := `
+	
+	id=1
+	AND name='abc' 
+	AND xyz=123`
+	t.Log(reIndent(query))
+}
+
+func Benchmark_reIndent(b *testing.B) {
+	query := `
+	id=1
+	AND name='abc' 
+	AND xyz=123`
+	b.ReportAllocs()
+	b.ResetTimer()
+	for i := 0; i < b.N; i++ {
+		reIndent(query)
+	}
+}
+
 func TestFrom(t *testing.T) {
 	arg := map[string]interface{}{
 		"published": true,

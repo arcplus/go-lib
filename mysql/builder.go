@@ -1,6 +1,7 @@
 package mysql
 
 import (
+	"bufio"
 	"bytes"
 	"fmt"
 
@@ -30,8 +31,28 @@ func (b *sBuilder) EXPR(str string) *sBuilder {
 	return b
 }
 
+// TODO optimize
+func reIndent(str string) string {
+	buf := &bytes.Buffer{}
+
+	for br := bufio.NewReader(bytes.NewBufferString(str)); ; {
+		line, _, err := br.ReadLine()
+		if err != nil {
+			break
+		}
+
+		line = bytes.TrimSpace(line)
+		if len(line) != 0 {
+			buf.WriteByte(' ')
+			buf.Write(line)
+		}
+	}
+
+	return buf.String()
+}
+
 func (b *sBuilder) WHERE(cond string) *sBuilder {
-	b.cond = wrap("WHERE " + cond)
+	b.cond = wrap("WHERE" + reIndent(cond))
 	return b
 }
 
@@ -61,9 +82,6 @@ func (b *sBuilder) FOR(str string) *sBuilder {
 	return b
 }
 
-var space = []byte(" ")
-var end = []byte(";")
-
 // warp with space
 func wrap(str string) []byte {
 	if str == "" {
@@ -71,6 +89,8 @@ func wrap(str string) []byte {
 	}
 	return []byte(" " + str)
 }
+
+var end = []byte(";")
 
 // Build map[string]interface{}, [bool?hasInStatement]
 // gen query, args, error
