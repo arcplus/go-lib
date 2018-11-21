@@ -39,3 +39,10 @@ func Close() error {
 	})
 	return nil
 }
+
+func getLupdAddr(lupd string) string {
+	if lupd == "" || lupd == "default" {
+		return "10.241.11.8:4161"
+	}
+	return lupd
+}

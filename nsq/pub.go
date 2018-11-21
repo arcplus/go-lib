@@ -31,7 +31,7 @@ func RegisterPub(lupdAddr string, config *Config, topics ...string) error {
 
 	pubMgr.SetLogger(logger{}, nsq.LogLevelInfo)
 
-	err = pubMgr.ConnectToNSQLookupd(lupdAddr)
+	err = pubMgr.ConnectToNSQLookupd(getLupdAddr(lupdAddr))
 	if err != nil {
 		return err
 	}

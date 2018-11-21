@@ -33,7 +33,7 @@ func SubscribeHandler(lupdAddr string, config *Config, topic, channel string, ha
 
 	consumer.AddConcurrentHandlers(handler, concurrency)
 
-	return consumer.ConnectToNSQLookupd(lupdAddr)
+	return consumer.ConnectToNSQLookupd(getLupdAddr(lupdAddr))
 }
 
 // SubscribeHandleFunc
