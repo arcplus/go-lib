@@ -1,19 +1,22 @@
-package log
+package nsq
 
 import (
 	"strings"
+
+	"github.com/arcplus/go-lib/log"
 )
 
-type NSQLogger struct {
+type logger struct {
 }
 
 // nsq logger impl
-func (NSQLogger) Output(calldepth int, s string) error {
+func (logger) Output(calldepth int, s string) error {
 	if len(s) < 5 {
 		return nil
 	}
 
-	l := KV("plugin", "nsq").Skip(calldepth)
+	// TODO depth + caller
+	l := log.Logger().KV("span", "nsq").Skip(calldepth)
 
 	if strings.HasPrefix(s, "INF") {
 		l.Info(s[5:])

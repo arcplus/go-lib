@@ -3,32 +3,35 @@ package nsq
 import (
 	"sync"
 
-	"github.com/arcplus/go-lib/errs"
-	"github.com/arcplus/go-lib/log"
 	"github.com/youzan/go-nsq"
+
+	"github.com/arcplus/go-lib/errs"
 )
 
 var psm = sync.Map{}
 
+type Config = nsq.Config
+type MsgExt = nsq.MsgExt
+
 func getPubMgr(topic string) (*nsq.TopicProducerMgr, error) {
 	pubMgr, ok := psm.Load(topic)
 	if !ok {
-		return nil, errs.New(401, "topic '%p' not register", topic)
+		return nil, errs.New(errs.CodeInternal, "nsq topic '%p' not register", topic)
 	}
 	return pubMgr.(*nsq.TopicProducerMgr), nil
 }
 
-func RegisterPub(addr string, config *nsq.Config, topics ...string) error {
-	addr, config = getConfig(addr, config)
+func RegisterPub(lupdAddr string, config *Config, topics ...string) error {
+	config = getConfig(config)
 
 	pubMgr, err := nsq.NewTopicProducerMgr(topics, config)
 	if err != nil {
 		return err
 	}
 
-	pubMgr.SetLogger(log.NSQLogger{}, nsq.LogLevelWarning)
+	pubMgr.SetLogger(logger{}, nsq.LogLevelInfo)
 
-	err = pubMgr.ConnectToNSQLookupd(addr)
+	err = pubMgr.ConnectToNSQLookupd(lupdAddr)
 	if err != nil {
 		return err
 	}
@@ -49,6 +52,16 @@ func Publish(topic string, body []byte) error {
 	return pubMgr.Publish(topic, body)
 }
 
+func PublishWithJsonExt(topic string, body []byte, ext *MsgExt) error {
+	pubMgr, err := getPubMgr(topic)
+	if err != nil {
+		return err
+	}
+
+	_, _, _, err = pubMgr.PublishWithJsonExt(topic, body, ext)
+	return err
+}
+
 func PublishOrdered(topic string, partitionKey []byte, body []byte) error {
 	pubMgr, err := getPubMgr(topic)
 	if err != nil {
@@ -59,21 +72,12 @@ func PublishOrdered(topic string, partitionKey []byte, body []byte) error {
 	return err
 }
 
-// Close all conn
-func Close() error {
-	sbm.Range(func(key, val interface{}) bool {
-		val.(*nsq.Consumer).Stop()
-		return true
-	})
+func PublishOrderedWithJsonExt(topic string, partitionKey []byte, body []byte, ext *MsgExt) error {
+	pubMgr, err := getPubMgr(topic)
+	if err != nil {
+		return err
+	}
 
-	pm := map[*nsq.TopicProducerMgr]bool{}
-	psm.Range(func(key, val interface{}) bool {
-		m := val.(*nsq.TopicProducerMgr)
-		if !pm[m] {
-			m.Stop()
-			pm[m] = true
-		}
-		return true
-	})
-	return nil
+	_, _, _, err = pubMgr.PublishOrderedWithJsonExt(topic, partitionKey, body, ext)
+	return err
 }

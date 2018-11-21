@@ -3,7 +3,6 @@ package nsq
 import (
 	"sync"
 
-	"github.com/arcplus/go-lib/log"
 	"github.com/youzan/go-nsq"
 )
 
@@ -16,8 +15,8 @@ type HandlerFunc func(msg *Message) error
 var sbm = sync.Map{}
 
 // SubscribeHandler
-func SubscribeHandler(addr string, config *nsq.Config, topic, channel string, handler Handler, concurrency int) error {
-	addr, config = getConfig(addr, config)
+func SubscribeHandler(lupdAddr string, config *Config, topic, channel string, handler Handler, concurrency int) error {
+	config = getConfig(config)
 
 	if channel == "" {
 		channel = "default"
@@ -30,14 +29,14 @@ func SubscribeHandler(addr string, config *nsq.Config, topic, channel string, ha
 
 	sbm.Store(topic+":"+channel, consumer)
 
-	consumer.SetLogger(log.NSQLogger{}, nsq.LogLevelWarning)
+	consumer.SetLogger(logger{}, nsq.LogLevelInfo)
 
 	consumer.AddConcurrentHandlers(handler, concurrency)
 
-	return consumer.ConnectToNSQLookupd(addr)
+	return consumer.ConnectToNSQLookupd(lupdAddr)
 }
 
 // SubscribeHandleFunc
-func SubscribeHandleFunc(addr string, config *nsq.Config, topic, channel string, handleFunc HandlerFunc, concurrency int) error {
+func SubscribeHandleFunc(addr string, config *Config, topic, channel string, handleFunc HandlerFunc, concurrency int) error {
 	return SubscribeHandler(addr, config, topic, channel, nsq.HandlerFunc(handleFunc), concurrency)
 }

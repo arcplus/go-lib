@@ -4,8 +4,6 @@ import (
 	"github.com/youzan/go-nsq"
 )
 
-var LookupdAddr = "10.241.11.8:4161"
-
 var defaultConfig = *nsq.NewConfig()
 
 func init() {
@@ -13,15 +11,31 @@ func init() {
 	defaultConfig.MaxAttempts = 128
 }
 
-func getConfig(addr string, config *nsq.Config) (string, *nsq.Config) {
-	if addr == "" || addr == "default" {
-		addr = LookupdAddr
-	}
+func getConfig(config *Config) *Config {
 	if config == nil {
 		// copy of default
 		d := defaultConfig
 		config = &d
 	}
 
-	return addr, config
+	return config
+}
+
+// Close all conn
+func Close() error {
+	sbm.Range(func(key, val interface{}) bool {
+		val.(*nsq.Consumer).Stop()
+		return true
+	})
+
+	pm := map[*nsq.TopicProducerMgr]bool{}
+	psm.Range(func(key, val interface{}) bool {
+		m := val.(*nsq.TopicProducerMgr)
+		if !pm[m] {
+			m.Stop()
+			pm[m] = true
+		}
+		return true
+	})
+	return nil
 }
