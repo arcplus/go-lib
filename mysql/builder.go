@@ -4,9 +4,26 @@ import (
 	"bufio"
 	"bytes"
 	"fmt"
+	"strings"
 
 	"github.com/jmoiron/sqlx"
 )
+
+// SELECT
+//     [ALL | DISTINCT | DISTINCTROW ]
+//       [HIGH_PRIORITY]
+//       [STRAIGHT_JOIN]
+//       [SQL_CACHE | SQL_NO_CACHE] [SQL_CALC_FOUND_ROWS]
+//     select_expr [, select_expr ...]
+//     [FROM table_references
+//     [WHERE where_condition]
+//     [GROUP BY {col_name | expr | position}
+//       [ASC | DESC], ...]
+//     [HAVING where_condition]
+//     [ORDER BY {col_name | expr | position}
+//       [ASC | DESC], ...]
+//     [LIMIT {[offset,] row_count | row_count OFFSET offset}]
+//     [FOR UPDATE | LOCK IN SHARE MODE]]
 
 type sBuilder struct {
 	smt   []byte
@@ -16,7 +33,7 @@ type sBuilder struct {
 	group []byte
 	order []byte
 	limit []byte
-	f     []byte
+	f0r   []byte
 }
 
 func SELECT(table string) *sBuilder {
@@ -26,8 +43,15 @@ func SELECT(table string) *sBuilder {
 	}
 }
 
-func (b *sBuilder) EXPR(str string) *sBuilder {
-	b.expr = wrap(str)
+// EXPR x should be string or []string
+func (b *sBuilder) EXPR(x interface{}) *sBuilder {
+	switch t := x.(type) {
+	case string:
+		b.expr = wrap(t)
+	case []string:
+		b.expr = wrap(strings.Join(t, ", "))
+	}
+
 	return b
 }
 
@@ -78,7 +102,7 @@ func (b *sBuilder) LIMIT(x ...interface{}) *sBuilder {
 }
 
 func (b *sBuilder) FOR(str string) *sBuilder {
-	b.f = wrap("FOR " + str)
+	b.f0r = wrap("FOR " + str)
 	return b
 }
 
@@ -104,7 +128,7 @@ func (b *sBuilder) Build(args ...interface{}) (string, []interface{}, error) {
 	buf.Write(b.group)
 	buf.Write(b.order)
 	buf.Write(b.limit)
-	buf.Write(b.f)
+	buf.Write(b.f0r)
 	buf.Write(end)
 
 	if l := len(args); l != 0 {
