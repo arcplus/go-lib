@@ -39,7 +39,7 @@ func (c *Cur) BeginningOfHour() time.Time {
 }
 
 func BeginningOfHour() time.Time {
-	return New(time.Now()).BeginningOfHour()
+	return Now().BeginningOfHour()
 }
 
 func (c *Cur) BeginningOfDay() time.Time {
@@ -48,7 +48,7 @@ func (c *Cur) BeginningOfDay() time.Time {
 }
 
 func BeginningOfDay() time.Time {
-	return New(time.Now()).BeginningOfDay()
+	return Now().BeginningOfDay()
 }
 
 func (c *Cur) BeginningOfWeek(mFirst bool) time.Time {
@@ -66,7 +66,7 @@ func (c *Cur) BeginningOfWeek(mFirst bool) time.Time {
 }
 
 func BeginningOfWeek(mFirst bool) time.Time {
-	return New(time.Now()).BeginningOfWeek(mFirst)
+	return Now().BeginningOfWeek(mFirst)
 }
 
 func (c *Cur) BeginningOfMonth() time.Time {
@@ -76,7 +76,7 @@ func (c *Cur) BeginningOfMonth() time.Time {
 }
 
 func BeginningOfMonth() time.Time {
-	return New(time.Now()).BeginningOfMonth()
+	return Now().BeginningOfMonth()
 }
 
 func (c *Cur) BeginningOfQuarter() time.Time {
@@ -86,7 +86,7 @@ func (c *Cur) BeginningOfQuarter() time.Time {
 }
 
 func BeginningOfQuarter() time.Time {
-	return New(time.Now()).BeginningOfQuarter()
+	return Now().BeginningOfQuarter()
 }
 
 func (c *Cur) EndOfHour() time.Time {
@@ -94,7 +94,7 @@ func (c *Cur) EndOfHour() time.Time {
 }
 
 func EndOfHour() time.Time {
-	return New(time.Now()).EndOfHour()
+	return Now().EndOfHour()
 }
 
 func (c *Cur) EndOfDay() time.Time {
@@ -102,7 +102,7 @@ func (c *Cur) EndOfDay() time.Time {
 }
 
 func EndOfDay() time.Time {
-	return New(time.Now()).EndOfDay()
+	return Now().EndOfDay()
 }
 
 func (c *Cur) EndOfWeek(mFirst bool) time.Time {
@@ -110,7 +110,7 @@ func (c *Cur) EndOfWeek(mFirst bool) time.Time {
 }
 
 func EndOfWeek(mFirst bool) time.Time {
-	return New(time.Now()).EndOfWeek(mFirst)
+	return Now().EndOfWeek(mFirst)
 }
 
 func (c *Cur) EndOfMonth() time.Time {
@@ -118,7 +118,7 @@ func (c *Cur) EndOfMonth() time.Time {
 }
 
 func EndOfMonth() time.Time {
-	return New(time.Now()).EndOfMonth()
+	return Now().EndOfMonth()
 }
 
 func (c *Cur) EndOfQuarter() time.Time {
@@ -126,7 +126,7 @@ func (c *Cur) EndOfQuarter() time.Time {
 }
 
 func EndOfQuarter() time.Time {
-	return New(time.Now()).EndOfQuarter()
+	return Now().EndOfQuarter()
 }
 
 func (c *Cur) Format(f string) string {
@@ -134,7 +134,7 @@ func (c *Cur) Format(f string) string {
 }
 
 func Format(f string) string {
-	return New(time.Now()).Format(f)
+	return Now().Format(f)
 }
 
 func Parse(layout string, value string) (*Cur, error) {

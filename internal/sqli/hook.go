@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"github.com/arcplus/go-lib/log"
+	"github.com/arcplus/go-lib/now"
 )
 
 // Hooks satisfies the sqlhook.Hooks interface
@@ -22,7 +23,7 @@ func (h *Hook) After(ctx context.Context, query string, args ...interface{}) (co
 
 	logger := log.KVPair(map[string]interface{}{
 		"span": "sql",
-		"took": td.Nanoseconds() / 1000, // ns->us
+		"took": now.NanoToMs(td.Nanoseconds()),
 	})
 
 	if tid, ok := ctx.Value("x-request-id").(string); ok {
@@ -43,7 +44,7 @@ func (h *Hook) OnError(ctx context.Context, err error, query string, args ...int
 
 	logger := log.KVPair(map[string]interface{}{
 		"span": "sql",
-		"took": td.Nanoseconds() / 1000, // ns->us
+		"took": now.NanoToMs(td.Nanoseconds()),
 	})
 
 	if tid, ok := ctx.Value("x-request-id").(string); ok {
