@@ -87,7 +87,7 @@ func New(moduleName ...string) Micro {
 	log.SetAttachment(kv)
 
 	level := getLogLevel(os.Getenv("log_level"))
-	log.SetLevel(level)
+	log.SetGlobalLevel(level)
 
 	ws := []io.Writer{}
 

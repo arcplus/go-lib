@@ -15,11 +15,6 @@ import (
 
 // Level indicate log level.
 type Level = zerolog.Level
-type Sampler = zerolog.Sampler
-
-// BasicSampler is a sampler that will send every Nth events, regardless of
-// there level.
-type BasicSampler = zerolog.BasicSampler
 
 // Level
 const (
@@ -31,6 +26,12 @@ const (
 	Disabled   = zerolog.Disabled
 )
 
+type Sampler = zerolog.Sampler
+
+// BasicSampler is a sampler that will send every Nth events, regardless of
+// there level.
+type BasicSampler = zerolog.BasicSampler
+
 // Log struct.
 type Log struct {
 	mu           *sync.RWMutex
@@ -39,7 +40,7 @@ type Log struct {
 	depth        int
 	callerEnable bool
 	stackEnable  bool
-	kv           []interface{} // must be even len
+	kv           []interface{} // len must be even
 }
 
 var zl = zerolog.New(zerolog.ConsoleWriter{Out: os.Stdout}).With().Timestamp().Logger()
@@ -56,7 +57,7 @@ var prefixSize int
 func init() {
 	zerolog.MessageFieldName = "msg"
 	zerolog.TimestampFieldName = "ts"
-	zerolog.TimeFieldFormat = ""
+	zerolog.TimeFieldFormat = "" // using unix time format
 
 	_, file, _, ok := runtime.Caller(0)
 	if file == "?" {
@@ -88,11 +89,12 @@ func SetOutput(w ...io.Writer) {
 	}
 }
 
-// SetLevel set global log max level.
-func SetLevel(l Level) {
+// SetGlobalLevel set global log level.
+func SetGlobalLevel(l Level) {
 	zerolog.SetGlobalLevel(l)
 }
 
+// TODO maybe we should use zerolog default depth
 var depth = 2
 
 // SetCallDepth set call depth for show line number.

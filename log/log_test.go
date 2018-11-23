@@ -32,7 +32,7 @@ func TestSetAttachment(t *testing.T) {
 
 func TestEnabled(t *testing.T) {
 	// reset
-	defer SetLevel(DebugLevel)
+	defer SetGlobalLevel(DebugLevel)
 
 	if !DebugEnabled() {
 		t.Fatalf("debug level should be enabled.")
@@ -43,7 +43,7 @@ func TestEnabled(t *testing.T) {
 		t.Fatalf("debug level should be enabled.")
 	}
 
-	SetLevel(InfoLevel)
+	SetGlobalLevel(InfoLevel)
 
 	if DebugEnabled() {
 		t.Fatalf("debug should not be enabled.")
@@ -145,14 +145,14 @@ func TestLog2Redis(t *testing.T) {
 	WithStack().Info("stack")
 }
 
-func TestSetLevel(t *testing.T) {
-	SetLevel(InfoLevel)
+func TestSetGlobalLevel(t *testing.T) {
+	SetGlobalLevel(InfoLevel)
 }
 
 // go test -v --count=1 -test.bench=".*"
 
 func BenchmarkBase(b *testing.B) {
-	SetLevel(InfoLevel)
+	SetGlobalLevel(InfoLevel)
 	b.ReportAllocs()
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
@@ -161,7 +161,7 @@ func BenchmarkBase(b *testing.B) {
 }
 
 func BenchmarkDebug(b *testing.B) {
-	SetLevel(InfoLevel)
+	SetGlobalLevel(InfoLevel)
 	b.ReportAllocs()
 	for i := 0; i < b.N; i++ {
 		Debug("MSG")
@@ -169,7 +169,7 @@ func BenchmarkDebug(b *testing.B) {
 }
 
 func BenchmarkDebugf(b *testing.B) {
-	SetLevel(InfoLevel)
+	SetGlobalLevel(InfoLevel)
 	b.ReportAllocs()
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
@@ -178,7 +178,7 @@ func BenchmarkDebugf(b *testing.B) {
 }
 
 func BenchmarkKV(b *testing.B) {
-	SetLevel(InfoLevel)
+	SetGlobalLevel(InfoLevel)
 	b.ReportAllocs()
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
