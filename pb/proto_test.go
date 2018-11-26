@@ -5,7 +5,6 @@ import (
 	"testing"
 
 	"github.com/arcplus/go-lib/internal/pb"
-	"github.com/golang/protobuf/proto"
 )
 
 func TestMarshal(t *testing.T) {
@@ -60,7 +59,7 @@ func TestUnmarshal(t *testing.T) {
 }
 
 func TestMarshalAny(t *testing.T) {
-	list := make([]proto.Message, 3)
+	list := make([]Message, 3)
 	list[1] = &pb.TestProto{}
 
 	as := MarshalAny(list[1])
