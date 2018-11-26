@@ -23,6 +23,8 @@ func NewUnix(sec interface{}) *Cur {
 		return &Cur{time.Unix(v, 0)}
 	case int:
 		return &Cur{time.Unix(int64(v), 0)}
+	case int32:
+		return &Cur{time.Unix(int64(v), 0)}
 	case string:
 		s, err := strconv.ParseInt(v, 10, 64)
 		if err != nil {
