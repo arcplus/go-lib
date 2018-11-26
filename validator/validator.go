@@ -14,7 +14,7 @@ type Validator interface {
 
 // Validate checks constraints
 func Validate(req interface{}, constraints ...string) error {
-	// check if impl Validator interface
+	// using Validate method if exist
 	if v, ok := req.(Validator); ok {
 		return v.Validate()
 	}
@@ -28,12 +28,15 @@ func Validate(req interface{}, constraints ...string) error {
 	var err error
 
 	for _, c := range constraints {
+		if c == "" {
+			continue
+		}
+
 		nodeName, funcName, funcParams := splitToken(c)
 
 		rv := rv
 
-		nodes := strings.Split(nodeName, ".")
-		for _, node := range nodes {
+		for _, node := range strings.Split(nodeName, ".") {
 			rv, err = valueWalker(rv, node)
 			if err != nil {
 				return fmt.Errorf("field '%s' failed with %s", nodeName, err.Error())
