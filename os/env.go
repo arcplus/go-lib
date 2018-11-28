@@ -4,8 +4,8 @@ import (
 	"os"
 )
 
-// Env read env with given key, if empty return defaultValue
-func Env(key string, defaultValue ...string) string {
+// Getenv try to read ENV with optional default value.
+func Getenv(key string, defaultValue ...string) string {
 	if v := os.Getenv(key); v != "" {
 		return v
 	}
@@ -13,4 +13,9 @@ func Env(key string, defaultValue ...string) string {
 		return defaultValue[0]
 	}
 	return ""
+}
+
+// Deprecated, using Getenv instead.
+func Env(key string, defaultValue ...string) string {
+	return Getenv(key, defaultValue...)
 }

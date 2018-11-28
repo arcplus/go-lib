@@ -23,6 +23,12 @@ func MarshalIndent(v interface{}, prefix, indent string) ([]byte, error) {
 	return json.MarshalIndent(v, prefix, indent)
 }
 
+// MustMarshal
+func MustMarshal(v interface{}) []byte {
+	data, _ := json.Marshal(v)
+	return data
+}
+
 // Unmarshal
 func Unmarshal(data []byte, v interface{}) error {
 	return json.Unmarshal(data, v)
