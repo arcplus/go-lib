@@ -83,7 +83,7 @@ func MultiRunWithPool(n int, fs ...WorkFunc) {
 	wg.Add(l)
 
 	// shrink worker size
-	if n > l {
+	if n > l || n <= 0 {
 		n = l
 	}
 
