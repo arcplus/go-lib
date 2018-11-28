@@ -12,17 +12,6 @@ type Code uint32
 // Deprecated using Code instead
 type ErrCode = Code
 
-// Deprecated using CodeXXX instead
-const (
-	ErrOK         = CodeOK
-	ErrInternal   = CodeInternal
-	ErrBadRequest = CodeBadRequest
-	ErrUnAuth     = CodeUnAuth // miss token
-	ErrForbidden  = CodeForbidden
-	ErrNotFound   = CodeNotFound
-	ErrConflict   = CodeConflict // conflict error
-)
-
 const (
 	CodeOK         Code = 0
 	CodeInternal   Code = 1000
@@ -51,7 +40,7 @@ type Error struct {
 	line int
 }
 
-// new returns Error
+// newError returns Error
 func newError(code Code, msg string, args []interface{}, prev error, skip int) *Error {
 	err := &Error{
 		code:    code,
@@ -146,19 +135,6 @@ func New(code Code, msg string, args ...interface{}) error {
 	return newError(code, msg, args, nil, 1)
 }
 
-// NewRaw do the same as New but no line info added.
-//
-// For example:
-//    return errs.NewRaw(401, "missing id")
-//
-func NewRaw(code Code, msg string, args ...interface{}) error {
-	if code == CodeOK {
-		return nil
-	}
-
-	return newError(code, msg, args, nil, -1)
-}
-
 // NewWithAlert is a drop in replacement for the standard library errors module that records
 // the location that the error is created but with alert msg for show.
 //
@@ -171,21 +147,6 @@ func NewWithAlert(code Code, alert string, msgf string, args ...interface{}) err
 	}
 
 	e := newError(code, msgf, args, nil, 1)
-	e.alert = alert
-	return e
-}
-
-// NewRawWithAlert do the same as NewWithHint but no line info added.
-//
-// For example:
-//    return errs.New(404, "用户不存在", "user not found")
-//
-func NewRawWithAlert(code Code, alert string, msgf string, args ...interface{}) error {
-	if code == CodeOK {
-		return nil
-	}
-
-	e := newError(code, msgf, args, nil, -1)
 	e.alert = alert
 	return e
 }
@@ -235,13 +196,13 @@ func Trace(err error) error {
 		return nil
 	}
 
-	newErr := newError(CodeInternal, "", nil, nil, 1)
+	newErr := newError(CodeInternal, "", nil, err, 1)
 
 	v, ok := err.(*Error)
 	if ok {
 		newErr.code = v.Code()
 		newErr.message = v.Message()
-		newErr.prev = err
+		newErr.alert = v.Alert()
 	} else {
 		newErr.message = err.Error()
 	}
@@ -295,48 +256,4 @@ func DeferredAnnotate(err *error, msg string, args ...interface{}) {
 	}
 
 	*err = newErr
-}
-
-// Internal for some internal error
-func Internal(err error) error {
-	if err == nil {
-		return nil
-	}
-	return newError(CodeInternal, err.Error(), nil, nil, 1)
-}
-
-// BadRequest error
-func BadRequest(msg interface{}, args ...interface{}) error {
-	var msgStr string
-	switch v := msg.(type) {
-	case string:
-		msgStr = v
-	case error:
-		if e, ok := v.(*Error); ok {
-			return newError(CodeBadRequest, e.Message(), nil, e, 1)
-		}
-		return newError(CodeBadRequest, v.Error(), nil, v, 1)
-	default:
-		msgStr = fmt.Sprint(msg)
-	}
-
-	return newError(CodeBadRequest, msgStr, args, nil, 1)
-}
-
-// UnAuthorized error
-func UnAuthorized(msg interface{}, args ...interface{}) error {
-	var msgStr string
-	switch v := msg.(type) {
-	case string:
-		msgStr = v
-	case error:
-		if e, ok := v.(*Error); ok {
-			return newError(CodeUnAuth, e.Message(), nil, e, 1)
-		}
-		return newError(CodeUnAuth, v.Error(), nil, v, 1)
-	default:
-		msgStr = fmt.Sprint(msg)
-	}
-
-	return newError(CodeUnAuth, msgStr, args, nil, 1)
 }

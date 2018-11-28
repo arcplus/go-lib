@@ -15,8 +15,34 @@ type wrapper interface {
 	Unwrap() error
 }
 
+// Cause returns the underlying cause of the error, if possible.
+// An error value has a cause if it implements the following
+// interface:
+//
+//	type wrapper interface {
+//		Unwrap() error
+//	}
+//
+// If the error does not implement wrapper, the original error will
+// be returned. If the error is nil, nil will be returned without further
+// investigation.
+func Cause(err error) error {
+	for err != nil {
+		w, ok := err.(wrapper)
+		if !ok {
+			break
+		}
+		cause := w.Unwrap()
+		if cause == nil {
+			break
+		}
+		err = cause
+	}
+	return err
+}
+
 // Is reports whether err or any of the errors in its chain is equal to target.
-func Is(err, target error) bool {
+func IsErr(err, target error) bool {
 	for {
 		if err == target {
 			return true
@@ -57,7 +83,7 @@ func ToError(err error) *Error {
 		return e
 	}
 
-	return newError(CodeInternal, err.Error(), nil, err, -1)
+	return newError(CodeInternal, err.Error(), nil, err, 1)
 }
 
 // WithAlert change the *Error alert

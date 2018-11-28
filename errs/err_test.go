@@ -24,29 +24,8 @@ func TestNew(t *testing.T) {
 	t.Log(e2)
 }
 
-func TestNewRaw(t *testing.T) {
-	e1 := NewRaw(0, "ok")
-	if e1 != nil {
-		t.Fatalf("e0 should be nil")
-	}
-	t.Log(e1)
-	e2 := NewRaw(404, "not found")
-	if e2.Error() != "[404]not found" {
-		t.Fatal(e2)
-	}
-	t.Log(e2)
-}
-
 func TestNewWithAlert(t *testing.T) {
 	e1 := NewWithAlert(CodeBadRequest, "少参数", "missing params")
-	t.Log(e1)
-	data, _ := json.Marshal(e1)
-	t.Log(string(data))
-	t.Log(StackTrace(e1))
-}
-
-func TestNewRawWithAlert(t *testing.T) {
-	e1 := NewRawWithAlert(CodeBadRequest, "少参数", "missing params")
 	t.Log(e1)
 	data, _ := json.Marshal(e1)
 	t.Log(string(data))
@@ -113,28 +92,4 @@ func TestDeferredAnnotate(t *testing.T) {
 	if e2.Error() != "[9999]changed" {
 		t.Fatal(e2)
 	}
-}
-
-func TestInternal(t *testing.T) {
-	var err error
-	if err != nil {
-		t.Fatal("err should be nil")
-	}
-	err = Internal(err)
-	if err != nil {
-		t.Fatal("err should be nil")
-	}
-}
-
-func TestUnAuthorized(t *testing.T) {
-	err := UnAuthorized("unauth: %s", "missing passwd")
-	t.Log(err)
-
-	err = errors.New("xxx")
-	err = UnAuthorized(err)
-	t.Log(err)
-
-	err = UnAuthorized(err)
-	t.Log(err)
-	t.Log(StackTrace(err))
 }
