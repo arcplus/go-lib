@@ -81,10 +81,12 @@ func New(moduleName ...string) Micro {
 	}
 
 	if gitCommit != "" {
-		kv["version"] = version + "_" + gitCommit + "_" + buildDate
+		kv["version"] = version + "_" + gitCommit
 	}
 
 	log.SetAttachment(kv)
+
+	log.SetForceCaller(os.Getenv("log_caller") == "enable")
 
 	level := getLogLevel(os.Getenv("log_level"))
 	log.SetGlobalLevel(level)

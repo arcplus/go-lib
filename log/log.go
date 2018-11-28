@@ -102,6 +102,13 @@ func SetCallDepth(n int) {
 	depth = n
 }
 
+var forceCaller = false
+
+// SetForceCaller set call depth for show line number.
+func SetForceCaller(t bool) {
+	forceCaller = t
+}
+
 // SetAttachment add global kv to logger
 func SetAttachment(kv map[string]interface{}) {
 	if len(kv) == 0 {
@@ -338,7 +345,7 @@ func (l Log) levelLog(lv Level, format string, v ...interface{}) {
 		}
 	}
 
-	if l.callerEnable {
+	if forceCaller || l.callerEnable {
 		_, file, line, ok := runtime.Caller(depth + l.depth)
 		if ok {
 			if prefixSize != 0 && len(file) > prefixSize {
