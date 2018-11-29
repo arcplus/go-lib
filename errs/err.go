@@ -257,3 +257,21 @@ func DeferredAnnotate(err *error, msg string, args ...interface{}) {
 
 	*err = newErr
 }
+
+// BadRequest error
+func BadRequest(msg interface{}, args ...interface{}) error {
+	var msgStr string
+	switch v := msg.(type) {
+	case string:
+		msgStr = v
+	case error:
+		if e, ok := v.(*Error); ok {
+			return newError(CodeBadRequest, e.Message(), nil, e, 1)
+		}
+		return newError(CodeBadRequest, v.Error(), nil, v, 1)
+	default:
+		msgStr = fmt.Sprint(msg)
+	}
+
+	return newError(CodeBadRequest, msgStr, args, nil, 1)
+}
