@@ -89,3 +89,5 @@ func MarshalAny(p interface{}) []*any.Any {
 		return nil
 	}
 }
+
+var UnmarshalAny = ptypes.UnmarshalAny
