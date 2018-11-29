@@ -4,8 +4,6 @@ import (
 	"bytes"
 	"context"
 
-	"github.com/golang/protobuf/ptypes"
-	"github.com/golang/protobuf/ptypes/any"
 	spb "google.golang.org/genproto/googleapis/rpc/status"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"
@@ -14,13 +12,13 @@ import (
 
 	"github.com/arcplus/go-lib/errs"
 	"github.com/arcplus/go-lib/log"
+	"github.com/arcplus/go-lib/pb"
 	"github.com/arcplus/go-lib/scaffold/internal"
-	"github.com/arcplus/go-lib/tool"
 )
 
 // ServerErrorConvertor convert *Error to gRPC error
 func ServerErrorConvertor(ctx context.Context, req interface{}, info *grpc.UnaryServerInfo, handler grpc.UnaryHandler) (resp interface{}, err error) {
-	tid := "x-mock-id"
+	tid := "x-tracer-id"
 	if md, ok := metadata.FromIncomingContext(ctx); ok {
 		if t := md.Get("x-request-id"); len(t) != 0 && t[0] != "" {
 			tid = t[0]
@@ -33,25 +31,29 @@ func ServerErrorConvertor(ctx context.Context, req interface{}, info *grpc.Unary
 
 	// TODO using pool
 	buf := &bytes.Buffer{}
-
 	buf.WriteString("method: ")
 	buf.WriteString(info.FullMethod)
 
 	buf.WriteString("\nreq: ")
-	buf.WriteString(tool.MarshalToString(req))
+	buf.Write(pb.MustMarshal(req.(pb.Message)))
 
 	// recover
 	defer func() {
 		if r := recover(); r != nil {
-			logger.Skip(1).Errorf("recover grpc: %s\nerr: %v\nstack:\n%s", buf.String(), r, log.TakeStacktrace())
+			logger.Skip(1).Errorf("panic recover grpc: %s\nerr: %v\nstack:\n%s", buf.String(), r, log.TakeStacktrace())
 			// if panic, set custom error to 'err', in order that client and sense it.
 			err = status.Errorf(codes.Internal, "panic: %v", r)
 		}
 	}()
 
 	resp, err = handler(ctx, req)
+
 	var code int32
 	if err != nil {
+		buf.WriteString("\nerr: ")
+		buf.WriteString(errs.StackTrace(err))
+
+		// convert normal error to gRPC error
 		if _, ok := status.FromError(err); !ok {
 			e := errs.ToError(err)
 
@@ -63,24 +65,19 @@ func ServerErrorConvertor(ctx context.Context, req interface{}, info *grpc.Unary
 			}
 
 			if alert := e.Alert(); alert != "" {
-				errInfo := &internal.ErrorInfo{
+				s.Details = pb.MarshalAny(&internal.ErrorInfo{
 					Alert: alert,
-				}
-				a, _ := ptypes.MarshalAny(errInfo)
-				s.Details = []*any.Any{a}
+				})
 			}
 
 			err = status.ErrorProto(s)
 		}
+	} else {
+		buf.WriteString("\nresp: ")
+		buf.Write(pb.MustMarshal(resp.(pb.Message)))
 	}
 
-	buf.WriteString("\nresp: ")
-	buf.WriteString(tool.MarshalToString(resp))
-
-	buf.WriteString("\nerr: ")
-	buf.WriteString(tool.MarshalToString(err))
-
-	if err != nil && code < 1400 {
+	if err != nil && code < int32(errs.CodeBadRequest) {
 		logger.Error(buf.String())
 	} else if logger.DebugEnabled() {
 		logger.Debug(buf.String())

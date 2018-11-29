@@ -86,8 +86,6 @@ func New(moduleName ...string) Micro {
 
 	log.SetAttachment(kv)
 
-	log.SetForceCaller(os.Getenv("log_caller") == "enable")
-
 	level := getLogLevel(os.Getenv("log_level"))
 	log.SetGlobalLevel(level)
 

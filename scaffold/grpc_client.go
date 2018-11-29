@@ -3,11 +3,11 @@ package scaffold
 import (
 	"context"
 
-	"github.com/golang/protobuf/ptypes"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/status"
 
 	"github.com/arcplus/go-lib/errs"
+	"github.com/arcplus/go-lib/pb"
 	"github.com/arcplus/go-lib/scaffold/internal"
 )
 
@@ -21,11 +21,11 @@ func ClientErrorConvertor(ctx context.Context, method string, req, reply interfa
 		}
 
 		spb := s.Proto()
-		err = errs.NewRaw(errs.Code(spb.Code), spb.Message)
+		err = errs.New(errs.Code(spb.Code), spb.Message)
 
 		if len(spb.Details) != 0 {
 			errInfo := &internal.ErrorInfo{}
-			ptypes.UnmarshalAny(spb.Details[0], errInfo)
+			pb.UnmarshalAny(spb.Details[0], errInfo)
 			if errInfo.Alert != "" {
 				errs.WithAlert(err, errInfo.Alert)
 			}
