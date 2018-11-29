@@ -61,8 +61,8 @@ func Mode() string {
 	return mode
 }
 
-// New create Micro, moduleName.0 is module name.
-func New(moduleName ...string) Micro {
+// New create Micro, serviceName.0 is service name.
+func New(serviceName ...string) Micro {
 	m := &micro{
 		mu:            &sync.Mutex{},
 		errChan:       make(chan error, 1),
@@ -72,8 +72,8 @@ func New(moduleName ...string) Micro {
 
 	kv := map[string]interface{}{}
 
-	if len(moduleName) != 0 {
-		kv["module"] = moduleName[0]
+	if len(serviceName) != 0 {
+		kv["service"] = serviceName[0]
 	}
 
 	if mode != "" {
