@@ -203,10 +203,8 @@ func (m *micro) ServeHTTP(bindAddr string, handler http.Handler) {
 		}
 
 		server := &http.Server{
-			Handler:        handler,
-			ReadTimeout:    30 * time.Second,
-			WriteTimeout:   30 * time.Second,
-			MaxHeaderBytes: 2 << 15, // 64k
+			Handler:           handler,
+			ReadHeaderTimeout: 30 * time.Second,
 		}
 
 		m.AddResCloseFunc(func() error {
