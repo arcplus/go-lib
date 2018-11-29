@@ -26,6 +26,11 @@ const (
 	Disabled   = zerolog.Disabled
 )
 
+type Event = zerolog.Event
+
+type Hook = zerolog.Hook
+type HookFunc = zerolog.HookFunc
+
 type Sampler = zerolog.Sampler
 
 // BasicSampler is a sampler that will send every Nth events, regardless of
@@ -246,6 +251,32 @@ func WithStack() Log {
 
 func (l Log) WithStack() Log {
 	l.stackEnable = true
+	return l
+}
+
+func WithHook(h Hook) Log {
+	l := logger
+	hl := l.zl.Hook(h)
+	l.zl = &hl
+	return l
+}
+
+func (l Log) WithHook(h Hook) Log {
+	hl := l.zl.Hook(h)
+	l.zl = &hl
+	return l
+}
+
+func WithHookFunc(h HookFunc) Log {
+	l := logger
+	hl := l.zl.Hook(h)
+	l.zl = &hl
+	return l
+}
+
+func (l Log) WithHookFunc(h HookFunc) Log {
+	hl := l.zl.Hook(h)
+	l.zl = &hl
 	return l
 }
 

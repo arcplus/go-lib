@@ -149,6 +149,14 @@ func TestSetGlobalLevel(t *testing.T) {
 	SetGlobalLevel(InfoLevel)
 }
 
+func RunX(e *Event, level Level, msg string) {
+	e.Str("xyz", "123").Str("m", "n")
+}
+
+func TestHook(t *testing.T) {
+	WithHookFunc(RunX).KV("xyz", "abc").Info("111")
+}
+
 // go test -v --count=1 -test.bench=".*"
 
 func BenchmarkBase(b *testing.B) {
