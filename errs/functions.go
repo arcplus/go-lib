@@ -5,14 +5,197 @@ import (
 	"strings"
 )
 
-var _ wrapper = Error{}
-
-// A Wrapper is an error implementation
+// Wrapper is an error implementation
 // wrapping context around another error.
-type wrapper interface {
+type Wrapper interface {
 	// Unwrap returns the next error in the error chain.
 	// If there is no next error, Unwrap returns nil.
 	Unwrap() error
+}
+
+// Locationer indicate where error occured.
+type Locationer interface {
+	Location() (string, int)
+}
+
+// Errorer interface.
+type Errorer interface {
+	Code() uint32
+	Message() string
+}
+
+// toError try convert to *err
+func toError(e error) *Error {
+	if e == nil {
+		return nil
+	}
+
+	if er, ok := e.(*Error); ok {
+		en := *er
+		en.prev = er
+		return &en
+	}
+
+	if er, ok := e.(Errorer); ok {
+		return &Error{
+			code: er.Code(),
+			msg:  er.Message(),
+			prev: e,
+		}
+	}
+
+	return &Error{
+		code: CodeInternal,
+		msg:  e.Error(),
+		prev: e,
+	}
+}
+
+// New is a drop in replacement for the standard library errors module that records
+// the location that the error is created.
+//
+// For example:
+//    return errs.New(401, "missing id")
+//
+func New(code uint32, msg string, args ...interface{}) error {
+	if code == CodeOK {
+		return nil
+	}
+
+	er := &Error{
+		code: code,
+		msg:  msg,
+		args: args,
+	}
+
+	er.setLocation(1)
+
+	return er
+}
+
+// NewWithAlert is a drop in replacement for the standard library errors module that records
+// the location that the error is created but with alert msg for show.
+//
+// For example:
+//    return errs.New(404, "用户不存在", "user not found")
+//
+func NewWithAlert(code uint32, alert string, msg string, args ...interface{}) error {
+	if code == CodeOK {
+		return nil
+	}
+
+	er := &Error{
+		code:  code,
+		msg:   msg,
+		args:  args,
+		alert: alert,
+	}
+
+	er.setLocation(1)
+
+	return er
+}
+
+// Trace add file and line info to err.
+//
+// For example:
+//   err:=someFunc()
+//   if err!=nil {
+//	   return errs.Trace(err)
+//   }
+func Trace(e error) error {
+	er := toError(e)
+	if er == nil {
+		return nil
+	}
+
+	er.setLocation(1)
+
+	return er
+}
+
+// Wrap changes the code of the error. The location of the Wrap call is also
+// stored in the error stack.
+//
+// For example:
+//    err:=someFunc()
+//    if err!=nil {
+//        return errs.Wrap(err, 500, "internal err")
+//    }
+func Wrap(e error, code uint32, v ...interface{}) error {
+	er := toError(e)
+	if er == nil {
+		return nil
+	}
+
+	er.code = code
+	if len(v) != 0 {
+		if v0, ok := v[0].(string); ok {
+			er.msg = v0
+		} else {
+			er.msg = fmt.Sprint(v[0])
+		}
+		er.args = v[1:]
+	}
+	er.setLocation(1)
+
+	return er
+}
+
+// Annotate is used to add extra context to an existing error. The location of
+// the Annotate call is recorded with the annotations. The file, line and
+// function are also recorded.
+//
+// For example:
+//   if err := SomeFunc(); err != nil {
+//       return errs.Annotate(err, "failed to frombulate")
+//   }
+//
+func Annotate(e error, msg string, args ...interface{}) error {
+	er := toError(e)
+	if er == nil {
+		return nil
+	}
+
+	er.msg = msg
+	er.args = args
+	er.setLocation(1)
+
+	return er
+}
+
+// DeferredAnnotate annotates the given error (when it is not nil) with the given
+// format string and arguments (like fmt.Sprintf). If *err is nil, DeferredAnnotatef
+// does nothing. This method is used in a defer statement in order to annotate any
+// resulting error with the same message.
+//
+// For example:
+//
+//    defer DeferredAnnotate(&err, "failed to frombulate the %s", arg)
+//
+func DeferredAnnotate(e *error, msg string, args ...interface{}) {
+	er := toError(*e)
+	if er == nil {
+		return
+	}
+
+	er.msg = msg
+	er.args = args
+	er.setLocation(1)
+
+	*e = er
+}
+
+// ToError convert err to *err
+func ToError(e error) *Error {
+	er := toError(e)
+	if er == nil {
+		return nil
+	}
+
+	er.setLocation(1)
+
+	return er
 }
 
 // Cause returns the underlying cause of the error, if possible.
@@ -26,19 +209,19 @@ type wrapper interface {
 // If the error does not implement wrapper, the original error will
 // be returned. If the error is nil, nil will be returned without further
 // investigation.
-func Cause(err error) error {
-	for err != nil {
-		w, ok := err.(wrapper)
+func Cause(e error) error {
+	for e != nil {
+		w, ok := e.(Wrapper)
 		if !ok {
 			break
 		}
-		cause := w.Unwrap()
-		if cause == nil {
+		c := w.Unwrap()
+		if c == nil {
 			break
 		}
-		err = cause
+		e = c
 	}
-	return err
+	return e
 }
 
 // Is reports whether err or any of the errors in its chain is equal to target.
@@ -47,7 +230,7 @@ func IsErr(err, target error) bool {
 		if err == target {
 			return true
 		}
-		wrapper, ok := err.(wrapper)
+		wrapper, ok := err.(Wrapper)
 		if !ok {
 			return false
 		}
@@ -58,7 +241,7 @@ func IsErr(err, target error) bool {
 	}
 }
 
-func IsCode(err error, code Code) bool {
+func IsCode(err error, code uint32) bool {
 	for {
 		if err == nil {
 			return false
@@ -72,31 +255,6 @@ func IsCode(err error, code Code) bool {
 		}
 		err = e.Unwrap()
 	}
-}
-
-// ToError try convert err to *Error without line info
-func ToError(err error) *Error {
-	if err == nil {
-		return nil
-	}
-	if e, ok := err.(*Error); ok {
-		return e
-	}
-
-	return newError(CodeInternal, err.Error(), nil, err, 1)
-}
-
-// WithAlert change the *Error alert
-func WithAlert(err error, alert string) {
-	if e, ok := err.(*Error); ok {
-		e.alert = alert
-	}
-}
-
-var _ locationer = Error{}
-
-type locationer interface {
-	Location() (string, int)
 }
 
 func StackTrace(err error) string {
@@ -113,7 +271,7 @@ func stack(err error) []string {
 	var lines []string
 	for {
 		var buff []byte
-		if err, ok := err.(locationer); ok {
+		if err, ok := err.(Locationer); ok {
 			file, line := err.Location()
 			// Strip off the leading GOPATH/src path elements.
 			if file != "" {
@@ -123,7 +281,7 @@ func stack(err error) []string {
 		}
 
 		buff = append(buff, err.Error()...)
-		if cerr, ok := err.(wrapper); ok {
+		if cerr, ok := err.(Wrapper); ok {
 			err = cerr.Unwrap()
 		} else {
 			err = nil
@@ -135,4 +293,30 @@ func stack(err error) []string {
 		}
 	}
 	return lines
+}
+
+// BadRequest error
+func BadRequest(msg interface{}, args ...interface{}) error {
+	er := &Error{
+		code: CodeBadRequest,
+		args: args,
+	}
+
+	switch v := msg.(type) {
+	case string:
+		er.msg = v
+	case error:
+		er.prev = v
+		if e, ok := v.(*Error); ok {
+			er.msg = e.Message()
+		} else {
+			er.msg = v.Error()
+		}
+	default:
+		er.msg = fmt.Sprint(msg)
+	}
+
+	er.setLocation(1)
+
+	return er
 }

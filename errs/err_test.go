@@ -8,7 +8,7 @@ import (
 )
 
 var errGo = errors.New("go error")
-var errCodeTest Code = 9999
+var errCodeTest uint32 = 9999
 var errNew = New(errCodeTest, "errs.Error")
 
 func TestNew(t *testing.T) {
