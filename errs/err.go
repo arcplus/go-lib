@@ -35,23 +35,6 @@ type Error struct {
 	line int
 }
 
-// newError returns Error
-func newError(code uint32, msg string, args []interface{}, prev error, skip int) *Error {
-	err := &Error{
-		code: code,
-		msg:  msg,
-		args: args,
-		prev: prev,
-	}
-
-	// using skip -1 as no need line info
-	if skip != -1 {
-		_, err.file, err.line, _ = runtime.Caller(skip + 1)
-	}
-
-	return err
-}
-
 // Code return err casue code.
 func (e *Error) Code() uint32 {
 	if e.code == 0 {

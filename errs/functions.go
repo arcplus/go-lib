@@ -224,7 +224,7 @@ func Cause(e error) error {
 	return e
 }
 
-// Is reports whether err or any of the errors in its chain is equal to target.
+// IsErr reports whether err or any of the errors in its chain is equal to target.
 func IsErr(err, target error) bool {
 	for {
 		if err == target {
@@ -246,14 +246,20 @@ func IsCode(err error, code uint32) bool {
 		if err == nil {
 			return false
 		}
-		e, ok := err.(*Error)
+
+		e, ok := err.(Errorer)
 		if !ok {
 			return false
 		}
-		if e.code == code {
+		if e.Code() == code {
 			return true
 		}
-		err = e.Unwrap()
+
+		if e, ok := err.(Wrapper); ok {
+			err = e.Unwrap()
+		} else {
+			return false
+		}
 	}
 }
 
@@ -273,16 +279,14 @@ func stack(err error) []string {
 		var buff []byte
 		if err, ok := err.(Locationer); ok {
 			file, line := err.Location()
-			// Strip off the leading GOPATH/src path elements.
 			if file != "" {
-				file = trimGoPath(file)
 				buff = append(buff, fmt.Sprintf("%s:%d ", file, line)...)
 			}
 		}
 
 		buff = append(buff, err.Error()...)
-		if cerr, ok := err.(Wrapper); ok {
-			err = cerr.Unwrap()
+		if c, ok := err.(Wrapper); ok {
+			err = c.Unwrap()
 		} else {
 			err = nil
 		}
