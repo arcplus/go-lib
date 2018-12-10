@@ -14,11 +14,6 @@ import (
 	"github.com/arcplus/go-lib/pb"
 )
 
-type grpcError interface {
-	Code() uint32
-	Message() string
-}
-
 type grpcErrorWrapper struct {
 	s *status.Status
 }
@@ -78,10 +73,9 @@ func ServerErrorConvertor(ctx context.Context, req interface{}, info *grpc.Unary
 
 		// convert normal error to gRPC error
 		if _, ok := status.FromError(err); !ok {
-			if e, ok := err.(grpcError); ok {
-				code = e.Code()
-				err = status.Error(codes.Code(e.Code()), e.Message())
-			}
+			e := errs.ToError(err)
+			code = e.Code()
+			err = status.Error(codes.Code(e.Code()), e.Message())
 		}
 	} else {
 		buf.WriteString("\nresp: ")
