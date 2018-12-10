@@ -4,7 +4,6 @@ import (
 	"bytes"
 	"context"
 
-	spb "google.golang.org/genproto/googleapis/rpc/status"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/metadata"
@@ -13,8 +12,32 @@ import (
 	"github.com/arcplus/go-lib/errs"
 	"github.com/arcplus/go-lib/log"
 	"github.com/arcplus/go-lib/pb"
-	"github.com/arcplus/go-lib/scaffold/internal"
 )
+
+type grpcError interface {
+	Code() uint32
+	Message() string
+}
+
+type grpcErrorWrapper struct {
+	s *status.Status
+}
+
+func (e *grpcErrorWrapper) Code() uint32 {
+	return uint32(e.s.Code())
+}
+
+func (e *grpcErrorWrapper) Message() string {
+	return e.s.Message()
+}
+
+func (e *grpcErrorWrapper) Error() string {
+	return e.s.Err().Error()
+}
+
+func (e *grpcErrorWrapper) GRPCStatus() *status.Status {
+	return e.s
+}
 
 // ServerErrorConvertor convert *Error to gRPC error
 func ServerErrorConvertor(ctx context.Context, req interface{}, info *grpc.UnaryServerInfo, handler grpc.UnaryHandler) (resp interface{}, err error) {
@@ -48,39 +71,27 @@ func ServerErrorConvertor(ctx context.Context, req interface{}, info *grpc.Unary
 
 	resp, err = handler(ctx, req)
 
-	var code int32
+	var code uint32
 	if err != nil {
 		buf.WriteString("\nerr: ")
 		buf.WriteString(errs.StackTrace(err))
 
 		// convert normal error to gRPC error
 		if _, ok := status.FromError(err); !ok {
-			e := errs.ToError(err)
-
-			code = int32(e.Code())
-
-			s := &spb.Status{
-				Code:    code,
-				Message: e.Message(),
+			if e, ok := err.(grpcError); ok {
+				code = e.Code()
+				err = status.Error(codes.Code(e.Code()), e.Message())
 			}
-
-			if alert := e.Alert(); alert != "" {
-				s.Details = pb.MarshalAny(&internal.ErrorInfo{
-					Alert: alert,
-				})
-			}
-
-			err = status.ErrorProto(s)
 		}
 	} else {
 		buf.WriteString("\nresp: ")
 		buf.Write(pb.MustMarshal(resp.(pb.Message)))
 	}
 
-	if err != nil && code < int32(errs.CodeBadRequest) {
-		logger.Error(buf.String())
-	} else if logger.DebugEnabled() {
+	if logger.DebugEnabled() {
 		logger.Debug(buf.String())
+	} else if err != nil && code < errs.CodeBadRequest {
+		logger.Error(buf.String())
 	}
 
 	return resp, err

@@ -5,10 +5,6 @@ import (
 
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/status"
-
-	"github.com/arcplus/go-lib/errs"
-	"github.com/arcplus/go-lib/pb"
-	"github.com/arcplus/go-lib/scaffold/internal"
 )
 
 func ClientErrorConvertor(ctx context.Context, method string, req, reply interface{}, cc *grpc.ClientConn, invoker grpc.UnaryInvoker, opts ...grpc.CallOption) error {
@@ -20,18 +16,9 @@ func ClientErrorConvertor(ctx context.Context, method string, req, reply interfa
 			return err
 		}
 
-		spb := s.Proto()
-		err = errs.New(errs.Code(spb.Code), spb.Message)
-
-		if len(spb.Details) != 0 {
-			errInfo := &internal.ErrorInfo{}
-			pb.UnmarshalAny(spb.Details[0], errInfo)
-			if errInfo.Alert != "" {
-				errs.WithAlert(err, errInfo.Alert)
-			}
+		return &grpcErrorWrapper{
+			s: s,
 		}
-
-		return err
 	}
 
 	return nil
