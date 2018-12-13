@@ -81,7 +81,8 @@ func HealthCheck() error {
 func Close() error {
 	redisClients := redisStore.Items()
 
-	for _, v := range redisClients {
+	for k, v := range redisClients {
+		redisStore.Delete(k)
 		v.(*redis.Client).Close()
 	}
 
