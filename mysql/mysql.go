@@ -39,10 +39,6 @@ type Conf = sqli.Conf
 // Register dsn format -> [username[:password]@][protocol[(address)]]/dbname[?param1=value1&...&paramN=valueN]
 // each db should only register once
 func Register(name string, conf Conf) {
-	if name == "" {
-		name = sqli.DefaultDBName
-	}
-
 	db := conf.Initialize(driverName)
 
 	pool.Lock()
@@ -61,17 +57,12 @@ func Client(name string) (*sqlx.DB, error) {
 	}
 
 	pool.RUnlock()
-	return nil, fmt.Errorf("database %q not registered", name)
+	return nil, fmt.Errorf("mysql %q not registered", name)
 }
 
 // DB is helper func to get *sqlx.DB
-func DB(name ...string) *sqlx.DB {
-	var cli *sqlx.DB
-	if len(name) == 0 {
-		cli, _ = Client(sqli.DefaultDBName)
-	} else {
-		cli, _ = Client(name[0])
-	}
+func DB(name string) *sqlx.DB {
+	cli, _ := Client(name)
 	return cli
 }
 

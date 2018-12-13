@@ -7,8 +7,7 @@ import (
 )
 
 const (
-	DefaultDBName = "db"
-	HookSuffix    = "_with_hook"
+	HookSuffix = "_with_hook"
 )
 
 type Conf struct {

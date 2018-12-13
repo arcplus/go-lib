@@ -2,18 +2,18 @@ package redis
 
 import (
 	"fmt"
-	"sync"
 	"time"
 
 	"github.com/go-redis/redis"
 
 	"github.com/arcplus/go-lib/json"
+	"github.com/arcplus/go-lib/safemap"
 )
 
 // Nil reply Redis returns when key does not exist.
 const Nil = redis.Nil
 
-var redisConfig = sync.Map{}
+var redisStore = safemap.New()
 
 // Conf redis
 type Conf struct {
@@ -23,31 +23,35 @@ type Conf struct {
 // Register initialize redis
 // dsn format -> redis://:password@url/dbNum[optional,default 0]
 func Register(name string, conf Conf) error {
-	opts, err := redis.ParseURL(conf.DSN)
+	opt, err := redis.ParseURL(conf.DSN)
 	if err != nil {
 		return err
 	}
 
-	// TODO pool size
+	// TODO opt set using config
+	client := redis.NewClient(opt)
+	redisStore.Set(name, client)
 
-	client := redis.NewClient(opts)
-
-	redisConfig.Store(name, client)
-
-	return client.Ping().Err()
+	return nil
 }
 
 // Client return redis client
 func Client(name string) (*redis.Client, error) {
-	v, ok := redisConfig.Load(name)
+	v, ok := redisStore.Get(name)
 	if !ok {
-		return nil, fmt.Errorf("rds %q not registered", name)
+		return nil, fmt.Errorf("redis %q not registered", name)
 	}
 
 	return v.(*redis.Client), nil
 }
 
-// Get return redis client with given name or nil if not exist
+// DB return redis client with given name or nil if not exist
+func DB(name string) *redis.Client {
+	cli, _ := Client(name)
+	return cli
+}
+
+// Deprecated, using DB instead.
 func Get(name string) *redis.Client {
 	cli, _ := Client(name)
 	return cli
@@ -57,28 +61,30 @@ func Get(name string) *redis.Client {
 func HealthCheck() error {
 	errs := make(map[string]error)
 
-	redisConfig.Range(func(key, val interface{}) bool {
-		err := val.(*redis.Client).Ping().Err()
+	redisClients := redisStore.Items()
+
+	for k, v := range redisClients {
+		err := v.(*redis.Client).Ping().Err()
 		if err != nil {
-			errs[key.(string)] = err
+			errs[k.(string)] = err
 		}
-		return true
-	})
+	}
 
 	if len(errs) != 0 {
 		return fmt.Errorf("%v", errs)
 	}
+
 	return nil
 }
 
 // Close close all redis conn
 func Close() error {
-	redisConfig.Range(func(k, v interface{}) bool {
-		if c, ok := v.(*redis.Client); ok && c != nil {
-			c.Close()
-		}
-		return false
-	})
+	redisClients := redisStore.Items()
+
+	for _, v := range redisClients {
+		v.(*redis.Client).Close()
+	}
+
 	return nil
 }
 
