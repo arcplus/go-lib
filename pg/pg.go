@@ -28,10 +28,6 @@ var pool = &struct {
 type Conf = sqli.Conf
 
 func Register(name string, conf Conf) {
-	if name == "" {
-		name = sqli.DefaultDBName
-	}
-
 	db := conf.Initialize(driverName)
 
 	pool.Lock()
@@ -54,13 +50,8 @@ func Client(name string) (*sqlx.DB, error) {
 }
 
 // DB is helper func to get *sqlx.DB
-func DB(name ...string) *sqlx.DB {
-	var cli *sqlx.DB
-	if len(name) == 0 {
-		cli, _ = Client(sqli.DefaultDBName)
-	} else {
-		cli, _ = Client(name[0])
-	}
+func DB(name string) *sqlx.DB {
+	cli, _ := Client(name)
 	return cli
 }
 
