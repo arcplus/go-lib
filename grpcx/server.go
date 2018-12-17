@@ -97,3 +97,8 @@ func ServerErrorConvertor(ctx context.Context, req interface{}, info *grpc.Unary
 
 	return resp, err
 }
+
+var (
+	MaxRecvMsgSize = grpc.MaxRecvMsgSize
+	MaxSendMsgSize = grpc.MaxSendMsgSize
+)
