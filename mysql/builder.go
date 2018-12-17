@@ -56,10 +56,19 @@ func (b *sBuilder) EXPR(x interface{}) *sBuilder {
 }
 
 // TODO optimize
-func reIndent(str string) string {
+func reIndent(x interface{}) string {
+	var s *bytes.Buffer
+
+	switch t := x.(type) {
+	case *bytes.Buffer:
+		s = t
+	case string:
+		s = bytes.NewBufferString(t)
+	}
+
 	buf := &bytes.Buffer{}
 
-	for br := bufio.NewReader(bytes.NewBufferString(str)); ; {
+	for br := bufio.NewReader(s); ; {
 		line, _, err := br.ReadLine()
 		if err != nil {
 			break
@@ -76,7 +85,7 @@ func reIndent(str string) string {
 }
 
 func (b *sBuilder) WHERE(cond string) *sBuilder {
-	b.cond = wrap("WHERE" + reIndent(cond))
+	b.cond = wrap("WHERE " + cond)
 	return b
 }
 
@@ -136,10 +145,10 @@ func (b *sBuilder) Build(args ...interface{}) (string, []interface{}, error) {
 		if l > 1 {
 			query, args, err = sqlx.In(query, args...)
 		}
-		return query, args, err
+		return reIndent(query), args, err
 	}
 
-	return buf.String(), nil, nil
+	return reIndent(buf), nil, nil
 }
 
 // INSERT [LOW_PRIORITY | DELAYED | HIGH_PRIORITY] [IGNORE]

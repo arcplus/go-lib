@@ -8,14 +8,13 @@ import (
 	"github.com/go-sql-driver/mysql"
 	"github.com/jmoiron/sqlx"
 
-	"github.com/arcplus/go-lib/internal/sqli"
 	"github.com/arcplus/go-lib/safemap"
 )
 
 const driverName = "mysql"
 
 func init() {
-	sql.Register(driverName+sqli.HookSuffix, sqlhooks.Wrap(&mysql.MySQLDriver{}, &sqli.Hook{}))
+	sql.Register(driverName+HookSuffix, sqlhooks.Wrap(&mysql.MySQLDriver{}, &Hook{}))
 }
 
 // alias
@@ -28,8 +27,6 @@ type (
 )
 
 var store = safemap.New()
-
-type Conf = sqli.Conf
 
 // Register dsn format -> [username[:password]@][protocol[(address)]]/dbname[?param1=value1&...&paramN=valueN]
 // each db should only register once
