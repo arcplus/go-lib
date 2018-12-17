@@ -68,3 +68,26 @@ func TestMarshalAny(t *testing.T) {
 	as = MarshalAny(list)
 	t.Log(as, len(as))
 }
+
+func TestUnmarshalAny(t *testing.T) {
+	pb1 := &pb.TestProto{}
+	a1 := MarshalAny(pb1)
+	err := UnmarshalAny(a1[0], pb1)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	a2 := MarshalAny([]*pb.TestProto{
+		{
+			Name: "n1",
+		}, {
+			Name: "n2",
+		},
+	})
+	pb2 := make([]*pb.TestProto, 2)
+	err = UnmarshalAny(a2, pb2)
+	if err != nil {
+		t.Fatal(err)
+	}
+	t.Log(a2)
+}

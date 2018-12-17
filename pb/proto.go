@@ -90,4 +90,59 @@ func MarshalAny(p interface{}) []*any.Any {
 	}
 }
 
-var UnmarshalAny = ptypes.UnmarshalAny
+// UnmarshalAny
+// a must be *any.Any OR []*any.Any
+// p must be proto.Message or []proto.Message
+func UnmarshalAny(a interface{}, p interface{}) error {
+	switch a := a.(type) {
+	case *any.Any:
+		// m must be proto.Message
+		pm, ok := p.(Message)
+		if !ok {
+			return errors.New("m type error")
+		}
+		return ptypes.UnmarshalAny(a, pm)
+	case []*any.Any:
+		// m must be []proto.Message or *[]proto.Message
+		rv := reflect.ValueOf(p)
+
+		switch rv.Kind() {
+		case reflect.Slice:
+			la := len(a)
+			if rv.Len() != la {
+				// create if zero?
+				return errors.New("m len error")
+			}
+		case reflect.Ptr:
+			return UnmarshalAny(a, rv.Elem().Interface())
+		default:
+			return errors.New("m type error")
+		}
+
+		for i := range a {
+			pm, ok := rv.Index(i).Interface().(Message)
+			if !ok {
+				return errors.New("pm type error")
+			}
+
+			// create if is nil
+			if rv.Index(i).IsNil() {
+				rv.Index(i).Set(reflect.New(rv.Index(i).Type().Elem()))
+				pm = rv.Index(i).Interface().(Message)
+			}
+
+			err := ptypes.UnmarshalAny(a[i], pm)
+			if err != nil {
+				return err
+			}
+		}
+
+		return nil
+	default:
+		rv := reflect.ValueOf(p)
+		if rv.Kind() == reflect.Ptr {
+			return UnmarshalAny(a, rv.Elem().Interface())
+		}
+		return errors.New("a type error")
+	}
+}
