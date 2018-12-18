@@ -14,12 +14,16 @@ import (
 	"github.com/arcplus/go-lib/pb"
 )
 
+var (
+	MaxRecvMsgSize = grpc.MaxRecvMsgSize
+	MaxSendMsgSize = grpc.MaxSendMsgSize
+)
+
 // NewServer is helper func to create *grpc.Server
 func NewServer(opts ...grpc.ServerOption) *grpc.Server {
-	return grpc.NewServer(append([]grpc.ServerOption{ServerOpts}, opts...)...)
+	opts = append([]grpc.ServerOption{WithUnaryServerChain(ServerErrorConvertor)}, opts...)
+	return grpc.NewServer(opts...)
 }
-
-var ServerOpts = grpc.UnaryInterceptor(ServerErrorConvertor)
 
 // ServerErrorConvertor convert *Error to gRPC error
 func ServerErrorConvertor(ctx context.Context, req interface{}, info *grpc.UnaryServerInfo, handler grpc.UnaryHandler) (resp interface{}, err error) {
@@ -43,7 +47,7 @@ func ServerErrorConvertor(ctx context.Context, req interface{}, info *grpc.Unary
 	// recover
 	defer func() {
 		if r := recover(); r != nil {
-			logger.Skip(1).Errorf("panic recover grpc: %s\nerr: %v\nstack:\n%s", buf.String(), r, log.TakeStacktrace())
+			logger.Skip(1).Errorf("grpc panic recover: %s\nerr: %v\nstack:\n%s", buf.String(), r, log.TakeStacktrace())
 			// if panic, set custom error to 'err', in order that client and sense it.
 			err = status.Errorf(codes.Internal, "panic: %v", r)
 		}
@@ -75,8 +79,3 @@ func ServerErrorConvertor(ctx context.Context, req interface{}, info *grpc.Unary
 
 	return resp, err
 }
-
-var (
-	MaxRecvMsgSize = grpc.MaxRecvMsgSize
-	MaxSendMsgSize = grpc.MaxSendMsgSize
-)
