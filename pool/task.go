@@ -4,8 +4,6 @@ import (
 	"context"
 	"sync"
 	"time"
-
-	"golang.org/x/sync/errgroup"
 )
 
 const (
@@ -39,6 +37,34 @@ type WorkFunc func()
 // WorkFuncWithCtx is simple work func
 type WorkFuncWithCtx func(ctx context.Context) error
 
+func MultiRun(fs ...func() error) error {
+	if len(fs) == 0 {
+		return nil
+	}
+
+	var err error
+	var errOnce = &sync.Once{}
+
+	wg := &sync.WaitGroup{}
+	for i := range fs {
+		if fs[i] == nil {
+			continue
+		}
+		wg.Add(1)
+		go func(i int) {
+			if e := fs[i](); e != nil {
+				errOnce.Do(func() {
+					err = e
+				})
+			}
+			wg.Done()
+		}(i)
+	}
+
+	wg.Wait()
+	return err
+}
+
 // MultiRunWithCtx with ctx notify
 func MultiRunWithCtx(ctx context.Context, fs ...WorkFuncWithCtx) error {
 	if len(fs) == 0 {
@@ -49,18 +75,31 @@ func MultiRunWithCtx(ctx context.Context, fs ...WorkFuncWithCtx) error {
 		ctx = context.Background()
 	}
 
-	eg, ctx := errgroup.WithContext(ctx)
+	ctx, cancel := context.WithCancel(ctx)
+	defer cancel()
+
+	var err error
+	var errOnce = &sync.Once{}
+
+	wg := &sync.WaitGroup{}
 	for i := range fs {
 		if fs[i] == nil {
 			continue
 		}
-		i := i
-		eg.Go(func() error {
-			return fs[i](ctx)
-		})
+		wg.Add(1)
+		go func(i int) {
+			if e := fs[i](ctx); e != nil {
+				errOnce.Do(func() {
+					err = e
+					cancel()
+				})
+			}
+			wg.Done()
+		}(i)
 	}
 
-	return eg.Wait()
+	wg.Wait()
+	return err
 }
 
 // MultiRunWithPool
