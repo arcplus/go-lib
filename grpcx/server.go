@@ -21,26 +21,6 @@ func NewServer(opts ...grpc.ServerOption) *grpc.Server {
 
 var ServerOpts = grpc.UnaryInterceptor(ServerErrorConvertor)
 
-type grpcErrorWrapper struct {
-	s *status.Status
-}
-
-func (e *grpcErrorWrapper) Code() uint32 {
-	return uint32(e.s.Code())
-}
-
-func (e *grpcErrorWrapper) Message() string {
-	return e.s.Message()
-}
-
-func (e *grpcErrorWrapper) Error() string {
-	return e.s.Err().Error()
-}
-
-func (e *grpcErrorWrapper) GRPCStatus() *status.Status {
-	return e.s
-}
-
 // ServerErrorConvertor convert *Error to gRPC error
 func ServerErrorConvertor(ctx context.Context, req interface{}, info *grpc.UnaryServerInfo, handler grpc.UnaryHandler) (resp interface{}, err error) {
 	tid := "x-tracer-id"
@@ -49,8 +29,6 @@ func ServerErrorConvertor(ctx context.Context, req interface{}, info *grpc.Unary
 			tid = t[0]
 		}
 	}
-
-	ctx = context.WithValue(ctx, "x-request-id", tid)
 
 	logger := log.Trace(tid)
 
