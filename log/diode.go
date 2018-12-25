@@ -2,13 +2,15 @@ package log
 
 import (
 	"context"
+	"encoding/json"
+	"fmt"
 	"io"
 	"log"
 	"os"
 	"sync"
 	"time"
 
-	"code.cloudfoundry.org/go-diodes"
+	diodes "code.cloudfoundry.org/go-diodes"
 	"github.com/rs/zerolog"
 )
 
@@ -108,7 +110,10 @@ type ConsoleConfig struct {
 
 func ConsoleWriter(conf ConsoleConfig) io.Writer {
 	if conf.Async {
-		wr := NewAsyncWriter(0, zerolog.ConsoleWriter{Out: os.Stdout}, 1000, 10*time.Millisecond, func(missed int) {
+		wr := NewAsyncWriter(0, zerolog.ConsoleWriter{
+			Out:             os.Stdout,
+			FormatTimestamp: consoleTimeFormatter,
+		}, 1000, 10*time.Millisecond, func(missed int) {
 			log.Printf("Console Writer dropped %d messages", missed)
 		})
 
@@ -119,4 +124,16 @@ func ConsoleWriter(conf ConsoleConfig) io.Writer {
 		return wr
 	}
 	return zerolog.ConsoleWriter{Out: os.Stdout}
+}
+
+//
+func consoleTimeFormatter(i interface{}) string {
+	if i, ok := i.(json.Number); ok {
+		s, err := i.Int64()
+		if err == nil {
+			return time.Unix(s, 0).Format(time.RFC3339)
+		}
+	}
+
+	return fmt.Sprint(i)
 }

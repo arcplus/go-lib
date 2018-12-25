@@ -7,7 +7,6 @@ import (
 	"strconv"
 	"strings"
 	"sync"
-	"time"
 
 	"github.com/rs/zerolog"
 
@@ -50,8 +49,8 @@ type Log struct {
 }
 
 var zl = zerolog.New(zerolog.ConsoleWriter{
-	Out:        os.Stdout,
-	TimeFormat: time.RFC3339,
+	Out:             os.Stdout,
+	FormatTimestamp: consoleTimeFormatter,
 }).With().Timestamp().Logger()
 
 var logger = Log{
@@ -66,6 +65,7 @@ var prefixSize int
 func init() {
 	zerolog.MessageFieldName = "msg"
 	zerolog.TimestampFieldName = "ts"
+	zerolog.TimeFieldFormat = ""
 
 	_, file, _, ok := runtime.Caller(0)
 	if file == "?" {
