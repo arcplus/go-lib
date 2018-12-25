@@ -126,7 +126,6 @@ func ConsoleWriter(conf ConsoleConfig) io.Writer {
 	return zerolog.ConsoleWriter{Out: os.Stdout}
 }
 
-//
 func consoleTimeFormatter(i interface{}) string {
 	if i, ok := i.(json.Number); ok {
 		s, err := i.Int64()
