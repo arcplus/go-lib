@@ -27,9 +27,9 @@ func NewServer(opts ...grpc.ServerOption) *grpc.Server {
 
 // ServerErrorConvertor convert *Error to gRPC error
 func ServerErrorConvertor(ctx context.Context, req interface{}, info *grpc.UnaryServerInfo, handler grpc.UnaryHandler) (resp interface{}, err error) {
-	tid := "x-tracer-id"
+	tid := "x-request-id"
 	if md, ok := metadata.FromIncomingContext(ctx); ok {
-		if t := md.Get("x-request-id"); len(t) != 0 && t[0] != "" {
+		if t := md.Get("x-request-id"); len(t) != 0 {
 			tid = t[0]
 		}
 	}
@@ -53,7 +53,7 @@ func ServerErrorConvertor(ctx context.Context, req interface{}, info *grpc.Unary
 		}
 	}()
 
-	resp, err = handler(ctx, req)
+	resp, err = handler(context.WithValue(ctx, "x-request-id", tid), req)
 
 	var code uint32
 	if err != nil {
