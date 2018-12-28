@@ -97,6 +97,8 @@ func SetOutput(w ...io.Writer) {
 	}
 }
 
+var GlobalCallerEnable = false
+
 // SetGlobalLevel set global log level.
 func SetGlobalLevel(l Level) {
 	zerolog.SetGlobalLevel(l)
@@ -372,7 +374,7 @@ func (l Log) levelLog(lv Level, format string, v ...interface{}) {
 		}
 	}
 
-	if l.callerEnable {
+	if GlobalCallerEnable || l.callerEnable {
 		_, file, line, ok := runtime.Caller(depth + l.depth)
 		if ok {
 			if prefixSize != 0 && len(file) > prefixSize {
