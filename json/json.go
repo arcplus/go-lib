@@ -1,9 +1,10 @@
 package json
 
 import (
+	"bytes"
 	"io"
 
-	"github.com/json-iterator/go"
+	jsoniter "github.com/json-iterator/go"
 )
 
 var json = jsoniter.ConfigCompatibleWithStandardLibrary
@@ -60,4 +61,25 @@ func Valid(data []byte) bool {
 // If '*', it will map to each element of array or each key of map.
 func Get(data []byte, path ...interface{}) jsoniter.Any {
 	return json.Get(data, path...)
+}
+
+// ToMap convert struct to map[string]interface{}
+func ToMap(v interface{}) map[string]interface{} {
+	if vm, ok := v.(map[string]interface{}); ok {
+		return vm
+	}
+
+	buf := &bytes.Buffer{}
+	err := json.NewEncoder(buf).Encode(v)
+	if err != nil {
+		return nil
+	}
+
+	var result map[string]interface{}
+	err = json.NewDecoder(buf).Decode(&result)
+	if err != nil {
+		return nil
+	}
+
+	return result
 }

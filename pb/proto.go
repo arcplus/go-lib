@@ -6,6 +6,8 @@ import (
 	"io"
 	"reflect"
 
+	"github.com/arcplus/go-lib/json"
+
 	"github.com/golang/protobuf/jsonpb"
 	"github.com/golang/protobuf/proto"
 	"github.com/golang/protobuf/ptypes"
@@ -145,4 +147,22 @@ func UnmarshalAny(a interface{}, p interface{}) error {
 		}
 		return errors.New("a type error")
 	}
+}
+
+// ToMap convert proto message to map[string]interface{}
+func ToMap(pb Message) map[string]interface{} {
+	buf := &bytes.Buffer{}
+
+	err := pbm.Marshal(buf, pb)
+	if err != nil {
+		return nil
+	}
+
+	var result map[string]interface{}
+	err = json.NewDecoder(buf).Decode(&result)
+	if err != nil {
+		return nil
+	}
+
+	return result
 }

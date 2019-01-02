@@ -91,3 +91,11 @@ func TestUnmarshalAny(t *testing.T) {
 	}
 	t.Log(a2)
 }
+
+func TestToMap(t *testing.T) {
+	pb1 := &pb.TestProto{
+		Name: "n1",
+	}
+	result := ToMap(pb1)
+	t.Log(result)
+}
